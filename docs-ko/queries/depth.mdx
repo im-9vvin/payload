@@ -1,0 +1,119 @@
+---
+title: Depth
+label: Depth
+order: 10
+desc: Payload depth는 관련 문서들이 얼마나 깊게 populate될지를 제어합니다.
+keywords: query, documents, pagination, documentation, Content Management System, cms, headless, javascript, node, react, nextjs
+---
+
+기본적으로 Payload의 API는 모든 관련 문서를 완전히 populate하여 반환합니다. 하지만 때로는 관련 문서의 모든 데이터가 필요하지 않을 수도 있습니다. Depth API를 사용하면 관련 문서를 얼마나 깊게 populate할지 정확히 제어할 수 있습니다. 이는 데이터베이스 부하와 응답 크기에 영향을 주어 쿼리 성능에 도움이 될 수 있습니다.
+
+## Depth 이해하기
+
+`depth` 값은 Payload가 [Relationship](/docs/fields/relationship)과 [Upload](/docs/fields/upload) 필드를 얼마나 깊게 populate할지를 제어합니다.
+
+- `depth: 0` - 관련 문서들을 populate하지 않습니다. 대신 관련 문서의 ID 또는 문자열만 반환합니다.
+- `depth: 1` - 관련 문서들을 1단계 깊이까지 populate합니다.
+- `depth: 2` - 관련 문서와 그 관련 문서들을 2단계 깊이까지 populate합니다.
+
+예를 들어, `Post`가 `Author`를 참조하고, `Author`가 `Organization`을 참조한다면:
+- `depth: 0`에서는 Author ID만 얻습니다
+- `depth: 1`에서는 Author 객체를 얻지만 Organization ID만 얻습니다
+- `depth: 2`에서는 완전히 populate된 Author와 Organization 객체를 얻습니다
+
+<Banner type="warning">
+  **중요:** 성능상의 이유로, `depth`로 populate할 필드에는 `index: true`를 활성화하는 것을 권장합니다. [자세한 내용](../database/indexes)
+</Banner>
+
+## Local API
+
+[Local API](../local-api/overview)에서 depth를 지정하려면, 쿼리에서 `depth` 옵션을 사용할 수 있습니다:
+
+```ts
+import type { Payload } from 'payload'
+
+const getPosts = async (payload: Payload) => {
+  const posts = await payload.find({
+    collection: 'posts',
+    depth: 2, // highlight-line
+  })
+
+  return posts
+}
+```
+
+## REST API
+
+[REST API](../rest-api/overview)에서 depth를 지정하려면, 쿼리에서 `depth` 매개변수를 사용할 수 있습니다:
+
+```ts
+fetch('https://localhost:3000/api/posts?depth=0') // highlight-line
+  .then((response) => response.json())
+  .then((data) => console.log(data))
+```
+
+<Banner type="info">
+  **알림:** [Globals](../configuration/globals)에서도 `/api/globals` 엔드포인트를 사용하여 동일하게 작동합니다.
+</Banner>
+
+## GraphQL API
+
+[GraphQL API](../graphql/overview)에서 depth를 지정하려면, 쿼리에서 `depth` 매개변수를 사용할 수 있습니다:
+
+```ts
+query {
+  Posts(depth: 0) {
+    docs {
+      title
+      // author는 ID만 반환됩니다
+      author
+    }
+  }
+}
+```
+
+## Max Depth
+
+Payload 설정에서 `maxDepth` 속성을 설정하여 최대 허용 depth를 제한할 수 있습니다. 이는 순환 관계가 있을 때 무한 populate를 방지하는 데 도움이 됩니다. 최대 허용 depth는 개발 경험을 방해하지 않으면서 가능한 한 작아야 하며, 기본값은 `10`입니다.
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  maxDepth: 5, // highlight-line
+})
+```
+
+## defaultPopulate와 함께 사용하기
+
+[defaultPopulate](./select#defaultpopulate-collection-config-property)와 함께 `depth`를 사용할 수 있습니다. `defaultPopulate`는 어떤 필드를 선택할지 제어하고, `depth`는 관련 문서를 얼마나 깊게 populate할지 제어합니다.
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const Posts: CollectionConfig = {
+  slug: 'posts',
+  defaultPopulate: {
+    title: true,
+    author: true,
+  },
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+    },
+    {
+      name: 'author',
+      type: 'relationship',
+      relationTo: 'users',
+    },
+  ],
+}
+
+// 쿼리에서 depth와 함께 사용
+const posts = await payload.find({
+  collection: 'posts',
+  depth: 1, // author를 populate하지만 author의 관련 문서는 populate하지 않음
+})
+```

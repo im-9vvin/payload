@@ -1,0 +1,371 @@
+---
+title: 스토리지 어댑터
+label: 스토리지 어댑터
+order: 20
+desc: Payload는 파일 업로드를 처리하는 추가 스토리지 어댑터를 제공합니다. 이러한 어댑터를 통해 Amazon S3, Vercel Blob Storage, Google Cloud Storage, Uploadthing 등 다양한 위치에 파일을 저장할 수 있습니다.
+keywords: uploads, images, media, storage, adapters, s3, vercel, google cloud, azure
+---
+
+Payload는 파일 업로드를 처리하는 추가 스토리지 어댑터를 제공합니다. 이러한 어댑터를 통해 Amazon S3, Vercel Blob Storage, Google Cloud Storage 등 다양한 위치에 파일을 저장할 수 있습니다.
+
+| 서비스              | 패키지                                                                                                           |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Vercel Blob          | [`@payloadcms/storage-vercel-blob`](https://github.com/payloadcms/payload/tree/main/packages/storage-vercel-blob) |
+| AWS S3               | [`@payloadcms/storage-s3`](https://github.com/payloadcms/payload/tree/main/packages/storage-s3)                   |
+| Azure                | [`@payloadcms/storage-azure`](https://github.com/payloadcms/payload/tree/main/packages/storage-azure)             |
+| Google Cloud Storage | [`@payloadcms/storage-gcs`](https://github.com/payloadcms/payload/tree/main/packages/storage-gcs)                 |
+| Uploadthing          | [`@payloadcms/storage-uploadthing`](https://github.com/payloadcms/payload/tree/main/packages/storage-uploadthing) |
+
+## Vercel Blob Storage
+
+[`@payloadcms/storage-vercel-blob`](https://www.npmjs.com/package/@payloadcms/storage-vercel-blob)
+
+### 설치#vercel-blob-installation
+
+```sh
+pnpm add @payloadcms/storage-vercel-blob
+```
+
+### 사용법#vercel-blob-usage
+
+- Vercel Blob 어댑터를 사용해야 하는 컬렉션을 지정하도록 `collections` 객체를 구성하세요. slug는 기존 컬렉션 slug 중 하나와 _반드시_ 일치해야 합니다.
+- Vercel 환경 변수에 `BLOB_READ_WRITE_TOKEN`이 설정되어 있는지 확인하세요. 이는 보통 프로젝트에 blob storage를 추가한 후 Vercel에 의해 자동으로 설정됩니다.
+- 활성화되면 이 패키지는 각 컬렉션에 대해 `disableLocalStorage`를 `true`로 자동 설정합니다.
+- Vercel에 배포할 때 서버 업로드는 4.5MB로 제한됩니다. 클라이언트에서 직접 업로드하려면 `clientUploads`를 `true`로 설정하세요.
+
+```ts
+import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
+import { Media } from './collections/Media'
+import { MediaWithPrefix } from './collections/MediaWithPrefix'
+
+export default buildConfig({
+  collections: [Media, MediaWithPrefix],
+  plugins: [
+    vercelBlobStorage({
+      enabled: true, // 선택사항, 기본값은 true
+      // Vercel Blob을 사용해야 하는 컬렉션 지정
+      collections: {
+        media: true,
+        'media-with-prefix': {
+          prefix: 'my-prefix',
+        },
+      },
+      // Vercel 프로젝트에 Blob storage가 추가된 후 Vercel에서 제공하는 토큰
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    }),
+  ],
+})
+```
+
+### 구성 옵션#vercel-blob-configuration
+
+| 옵션               | 설명                                                          | 기본값                       |
+| -------------------- | -------------------------------------------------------------------- | ----------------------------- |
+| `enabled`            | 플러그인 활성화 여부                                  | `true`                        |
+| `collections`        | Vercel Blob 어댑터를 적용할 컬렉션                      |                               |
+| `addRandomSuffix`    | Vercel Blob storage에서 업로드된 파일 이름에 무작위 접미사 추가 | `false`                       |
+| `cacheControlMaxAge` | Cache-Control max-age(초 단위)                                     | `365 * 24 * 60 * 60` (1년) |
+| `token`              | Vercel Blob storage 읽기/쓰기 토큰                                 | `''`                          |
+| `clientUploads`      | Vercel의 제한을 우회하기 위해 클라이언트에서 직접 업로드        |                               |
+
+## S3 Storage
+
+[`@payloadcms/storage-s3`](https://www.npmjs.com/package/@payloadcms/storage-s3)
+
+### 설치#s3-installation
+
+```sh
+pnpm add @payloadcms/storage-s3
+```
+
+### 사용법#s3-usage
+
+- S3 Storage 어댑터를 사용해야 하는 컬렉션을 지정하도록 `collections` 객체를 구성하세요. slug는 기존 컬렉션 slug 중 하나와 _반드시_ 일치해야 합니다.
+- `config` 객체는 ([`@aws-sdk/client-s3`](https://github.com/aws/aws-sdk-js-v3)의) 모든 [`S3ClientConfig`](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/s3) 객체가 될 수 있습니다. _이는 AWS 설정에 크게 의존합니다_. 자세한 정보는 AWS 문서를 확인하세요.
+- 활성화되면 이 패키지는 각 컬렉션에 대해 `disableLocalStorage`를 `true`로 자동 설정합니다.
+- Vercel에 배포할 때 서버 업로드는 4.5MB로 제한됩니다. 클라이언트에서 직접 업로드하려면 `clientUploads`를 `true`로 설정하세요. 웹사이트에 대해 버킷에 CORS PUT 메서드를 허용해야 합니다.
+- 파일 다운로드에 [사전 서명된 URL](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html)을 사용하도록 `signedDownloads`(전역적으로 또는 `collections`에서 컬렉션별로)를 구성하세요. 이는 액세스 제어를 여전히 존중하면서 대용량 파일(비디오 등)의 성능을 향상시킬 수 있습니다. 또한 `signedDownloads.shouldUseSignedURL`로 특정 파일에 대해서만 이 기능을 사용하려는 경우 Payload가 사전 서명된 URL을 사용해야 하는지에 대한 조건을 지정할 수 있습니다.
+
+```ts
+import { s3Storage } from '@payloadcms/storage-s3'
+import { Media } from './collections/Media'
+import { MediaWithPrefix } from './collections/MediaWithPrefix'
+
+export default buildConfig({
+  collections: [Media, MediaWithPrefix],
+  plugins: [
+    s3Storage({
+      collections: {
+        media: true,
+        'media-with-prefix': {
+          prefix,
+        },
+        'media-with-presigned-downloads': {
+          // mp4 파일만 필터링
+          signedDownloads: {
+            shouldUseSignedURL: ({ collection, filename, req }) => {
+              return filename.endsWith('.mp4')
+            },
+          },
+        },
+      },
+      bucket: process.env.S3_BUCKET,
+      config: {
+        credentials: {
+          accessKeyId: process.env.S3_ACCESS_KEY_ID,
+          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+        },
+        region: process.env.S3_REGION,
+        // ... 기타 S3 구성
+      },
+    }),
+  ],
+})
+```
+
+### 구성 옵션#s3-configuration
+
+AWS S3 구성에 대한 지침은 [AWS SDK 패키지](https://github.com/aws/aws-sdk-js-v3) 및 [`S3ClientConfig`](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/s3) 객체를 참조하세요.
+
+## Azure Blob Storage
+
+[`@payloadcms/storage-azure`](https://www.npmjs.com/package/@payloadcms/storage-azure)
+
+### 설치#azure-installation
+
+```sh
+pnpm add @payloadcms/storage-azure
+```
+
+### 사용법#azure-usage
+
+- Azure Blob 어댑터를 사용해야 하는 컬렉션을 지정하도록 `collections` 객체를 구성하세요. slug는 기존 컬렉션 slug 중 하나와 _반드시_ 일치해야 합니다.
+- 활성화되면 이 패키지는 각 컬렉션에 대해 `disableLocalStorage`를 `true`로 자동 설정합니다.
+- Vercel에 배포할 때 서버 업로드는 4.5MB로 제한됩니다. 클라이언트에서 직접 업로드하려면 `clientUploads`를 `true`로 설정하세요. 웹사이트에 대해 CORS PUT 메서드를 허용해야 합니다.
+
+```ts
+import { azureStorage } from '@payloadcms/storage-azure'
+import { Media } from './collections/Media'
+import { MediaWithPrefix } from './collections/MediaWithPrefix'
+
+export default buildConfig({
+  collections: [Media, MediaWithPrefix],
+  plugins: [
+    azureStorage({
+      collections: {
+        media: true,
+        'media-with-prefix': {
+          prefix,
+        },
+      },
+      allowContainerCreate:
+        process.env.AZURE_STORAGE_ALLOW_CONTAINER_CREATE === 'true',
+      baseURL: process.env.AZURE_STORAGE_ACCOUNT_BASEURL,
+      connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING,
+      containerName: process.env.AZURE_STORAGE_CONTAINER_NAME,
+    }),
+  ],
+})
+```
+
+### 구성 옵션#azure-configuration
+
+| 옵션                 | 설명                                                              | 기본값 |
+| ---------------------- | ------------------------------------------------------------------------ | ------- |
+| `enabled`              | 플러그인 활성화 여부                                      | `true`  |
+| `collections`          | Azure Blob 어댑터를 적용할 컬렉션                           |         |
+| `allowContainerCreate` | 컨테이너가 존재하지 않을 경우 생성 허용 여부 | `false` |
+| `baseURL`              | Azure Blob storage 계정의 기본 URL                              |         |
+| `connectionString`     | Azure Blob storage 연결 문자열                                     |         |
+| `containerName`        | Azure Blob storage 컨테이너 이름                                        |         |
+| `clientUploads`        | Vercel의 제한을 우회하기 위해 클라이언트에서 직접 업로드            |         |
+
+## Google Cloud Storage
+
+[`@payloadcms/storage-gcs`](https://www.npmjs.com/package/@payloadcms/storage-gcs)
+
+### 설치#gcs-installation
+
+```sh
+pnpm add @payloadcms/storage-gcs
+```
+
+### 사용법#gcs-usage
+
+- Google Cloud Storage 어댑터를 사용해야 하는 컬렉션을 지정하도록 `collections` 객체를 구성하세요. slug는 기존 컬렉션 slug 중 하나와 _반드시_ 일치해야 합니다.
+- 활성화되면 이 패키지는 각 컬렉션에 대해 `disableLocalStorage`를 `true`로 자동 설정합니다.
+- Vercel에 배포할 때 서버 업로드는 4.5MB로 제한됩니다. 클라이언트에서 직접 업로드하려면 `clientUploads`를 `true`로 설정하세요. 웹사이트에 대해 버킷에 CORS PUT 메서드를 허용해야 합니다.
+
+```ts
+import { gcsStorage } from '@payloadcms/storage-gcs'
+import { Media } from './collections/Media'
+import { MediaWithPrefix } from './collections/MediaWithPrefix'
+
+export default buildConfig({
+  collections: [Media, MediaWithPrefix],
+  plugins: [
+    gcsStorage({
+      collections: {
+        media: true,
+        'media-with-prefix': {
+          prefix,
+        },
+      },
+      bucket: process.env.GCS_BUCKET,
+      options: {
+        apiEndpoint: process.env.GCS_ENDPOINT,
+        projectId: process.env.GCS_PROJECT_ID,
+      },
+    }),
+  ],
+})
+```
+
+### 구성 옵션#gcs-configuration
+
+| 옵션          | 설명                                                                                         | 기본값   |
+| --------------- | --------------------------------------------------------------------------------------------------- | --------- |
+| `enabled`       | 플러그인 활성화 여부                                                                 | `true`    |
+| `collections`   | 스토리지를 적용할 컬렉션                                                                 |           |
+| `bucket`        | 사용할 버킷의 이름                                                                       |           |
+| `options`       | Google Cloud Storage 클라이언트 구성. [문서](https://github.com/googleapis/nodejs-storage) 참조 |           |
+| `acl`           | 업로드된 파일의 액세스 제어 목록                                                     | `Private` |
+| `clientUploads` | Vercel의 제한을 우회하기 위해 클라이언트에서 직접 업로드                                       |           |
+
+## Uploadthing Storage
+
+[`@payloadcms/storage-uploadthing`](https://www.npmjs.com/package/@payloadcms/storage-uploadthing)
+
+### 설치#uploadthing-installation
+
+```sh
+pnpm add @payloadcms/storage-uploadthing
+```
+
+### 사용법#uploadthing-usage
+
+- uploadthing을 사용해야 하는 컬렉션을 지정하도록 `collections` 객체를 구성하세요. slug는 기존 컬렉션 slug 중 하나와 _반드시_ 일치해야 하며 `upload` 타입이어야 합니다.
+- Uploadthing에서 토큰을 받아서 `options` 객체의 `token`으로 설정하세요.
+- `acl`은 선택사항이며 기본값은 `public-read`입니다.
+- Vercel에 배포할 때 서버 업로드는 4.5MB로 제한됩니다. 클라이언트에서 직접 업로드하려면 `clientUploads`를 `true`로 설정하세요.
+
+```ts
+export default buildConfig({
+  collections: [Media],
+  plugins: [
+    uploadthingStorage({
+      collections: {
+        media: true,
+      },
+      options: {
+        token: process.env.UPLOADTHING_TOKEN,
+        acl: 'public-read',
+      },
+    }),
+  ],
+})
+```
+
+### 구성 옵션#uploadthing-configuration
+
+| 옵션           | 설명                                                   | 기본값       |
+| ---------------- | ------------------------------------------------------------- | ------------- |
+| `token`          | Uploadthing에서 받은 토큰. 필수.                             |               |
+| `acl`            | 업로드된 파일의 액세스 제어 목록               | `public-read` |
+| `logLevel`       | Uploadthing의 로그 레벨                                     | `info`        |
+| `fetch`          | 커스텀 fetch 함수                                         | `fetch`       |
+| `defaultKeyType` | 파일 작업의 기본 키 타입                          | `fileKey`     |
+| `clientUploads`  | Vercel의 제한을 우회하기 위해 클라이언트에서 직접 업로드 |               |
+
+## 커스텀 스토리지 어댑터
+
+커스텀 스토리지 어댑터를 생성해야 하는 경우 [`@payloadcms/plugin-cloud-storage`](https://www.npmjs.com/package/@payloadcms/plugin-cloud-storage) 패키지를 사용할 수 있습니다. 이 패키지는 위에서 언급한 스토리지 어댑터에서 내부적으로 사용됩니다.
+
+### 설치#custom-installation
+
+`pnpm add @payloadcms/plugin-cloud-storage`
+
+### 사용법#custom-usage
+
+구조화 방법에 대한 지침은 기존 스토리지 어댑터를 참조하세요. `GeneratedAdapter` 인터페이스를 따르는 어댑터를 생성하세요. 그런 다음 어댑터를 `cloudStorage` 플러그인에 전달하세요.
+
+```ts
+export interface GeneratedAdapter {
+  /**
+   * 기본 컬렉션과 이미지 크기에 주입될
+   * 추가 필드
+   */
+  fields?: Field[]
+  /**
+   * 파일의 공개 URL을 생성
+   */
+  generateURL?: GenerateURL
+  handleDelete: HandleDelete
+  handleUpload: HandleUpload
+  name: string
+  onInit?: () => void
+  staticHandler: StaticHandler
+}
+```
+
+```ts
+import { buildConfig } from 'payload'
+import { cloudStoragePlugin } from '@payloadcms/plugin-cloud-storage'
+
+export default buildConfig({
+  plugins: [
+    cloudStorage({
+      collections: {
+        'my-collection-slug': {
+          adapter: theAdapterToUse, // 사용하려는 어댑터에 대한 문서 참조
+        },
+      },
+    }),
+  ],
+  // 나머지 설정이 여기에 옵니다
+})
+```
+
+## 플러그인 옵션
+
+이 플러그인은 여러 다른 Payload 컬렉션에서 작동하도록 구성할 수 있습니다. `*`는 필수 속성을 나타냅니다.
+
+| 옵션           | 타입                                | 설명                                                                                                                       |
+| ---------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `collections` \* | `Record<string, CollectionOptions>` | 플러그인을 활성화하려는 컬렉션의 slug로 설정된 키와 컬렉션별 옵션으로 설정된 값을 가진 객체. |
+| `enabled`        | `boolean`                           | 플러그인을 조건부로 활성화/비활성화. 기본값: `true`.                                                                          |
+
+## 컬렉션별 옵션
+
+| 옵션                        | 타입                                                                                                              | 설명                                                                                                                                                                                                   |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `adapter` \*                  | [Adapter](https://github.com/payloadcms/payload/blob/main/packages/plugin-cloud-storage/src/types.ts#L49)         | 이 컬렉션에 사용하고 싶은 어댑터를 전달하세요. 특정 시나리오에서 클라우드 스토리지를 우회하고 로컬 스토리지를 사용하려는 로컬 개발을 위해 이 필드를 `null`로 설정할 수도 있습니다. |
+| `disableLocalStorage`         | `boolean`                                                                                                         | 이 컬렉션에서 로컬 스토리지를 비활성화하도록 선택. 기본값은 `true`.                                                                                                                                       |
+| `disablePayloadAccessControl` | `true`                                                                                                            | Payload의 액세스 제어를 비활성화하려면 `true`로 설정. [자세히](#payload-access-control)                                                                                                                            |
+| `prefix`                      | `string`                                                                                                          | 버킷의 `media/images` 폴더 안에 파일을 업로드하려면 `media/images`로 설정.                                                                                                                             |
+| `generateFileURL`             | [GenerateFileURL](https://github.com/payloadcms/payload/blob/main/packages/plugin-cloud-storage/src/types.ts#L67) | 생성된 파일 URL을 직접 만든 것으로 재정의.                                                                                                                                                     |
+
+## Payload 액세스 제어
+
+Payload는 _정적으로 제공되는 파일에서도_ 실행되는 [액세스 제어](../access-control/overview)와 함께 제공됩니다. `upload` 활성화 컬렉션의 동일한 `read` 액세스 제어 속성이 사용되며, 업로드된 파일을 요청할 수 있는 사람을 제한할 수 있습니다.
+
+이 기능을 유지하기 위해 기본적으로 이 플러그인은 _모든 파일 URL을 정확히 동일하게_ 유지합니다. 파일 URL은 클라우드 스토리지 소스를 직접 가리키도록 업데이트되지 않습니다. 그런 경우 Payload의 액세스 제어가 완전히 우회되고 클라우드 호스팅 파일에 대한 공개 읽기 권한이 필요하기 때문입니다.
+
+대신 모든 업로드는 기본 `/collectionSlug/staticURL/filename` 경로에서 여전히 도달됩니다. 이 플러그인은 타사 클라우드 서비스에 호스팅된 모든 파일을 "통과"시키며, 기존 액세스 제어를 그대로 유지하는 추가 이점이 있습니다.
+
+이것이 적용되지 않는 경우(업로드 컬렉션에 `read: () => true` 또는 유사한 설정이 있는 경우) `disablePayloadAccessControl`을 `true`로 설정하여 이 기능을 비활성화할 수 있습니다. 이 설정이 적용되면 이 플러그인은 파일 URL을 클라우드 호스트를 직접 가리키도록 업데이트합니다.
+
+## 조건부 활성화/비활성화
+
+이 플러그인을 조건부로 활성화/비활성화하는 올바른 방법은 `enabled` 속성을 사용하는 것입니다.
+
+```ts
+cloudStoragePlugin({
+  enabled: process.env.MY_CONDITION === 'true',
+  collections: {
+    'my-collection-slug': {
+      adapter: theAdapterToUse, // 사용하려는 어댑터에 대한 문서 참조
+    },
+  },
+}),
+```

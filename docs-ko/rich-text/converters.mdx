@@ -1,0 +1,130 @@
+---
+title: Lexical Converters
+label: Converters
+order: 20
+desc: lexical, markdown, jsx, html 간의 변환
+keywords: lexical, rich text, editor, headless cms, convert, html, mdx, markdown, md, conversion, export, jsx
+---
+
+리치텍스트 필드는 데이터를 JSON으로 저장합니다 - 이는 저장과 유연성에 좋으며 다른 형식으로 쉽게 변환할 수 있게 해줍니다:
+
+- [JSX 변환](/docs/rich-text/converting-jsx)
+- [HTML 변환](/docs/rich-text/converting-html)
+- [일반 텍스트 변환](/docs/rich-text/converting-plaintext)
+- [Markdown 및 MDX 변환](/docs/rich-text/converting-markdown)
+
+## 에디터 설정 검색하기
+
+일부 변환기는 사용 가능한 기능과 동작을 정의하는 Lexical 에디터 설정에 액세스해야 합니다. Payload는 `@payloadcms/richtext-lexical`의 `editorConfigFactory`를 통해 에디터 설정을 얻는 여러 방법을 제공합니다.
+
+### Factory 가져오기
+
+먼저 필요한 유틸리티를 가져옵니다:
+
+```ts
+import type { SanitizedConfig } from 'payload'
+import { editorConfigFactory } from '@payloadcms/richtext-lexical'
+
+// 기본 에디터 설정을 검색하기 위해서는 Payload Config가 사용 가능해야 합니다
+const config: SanitizedConfig = {} as SanitizedConfig
+```
+
+### 옵션 1: 기본 에디터 설정
+
+기본 에디터 설정이 필요한 경우:
+
+```ts
+const defaultEditorConfig = await editorConfigFactory.default({ config })
+```
+
+### 옵션 2: Lexical 필드에서 추출
+
+lexical 필드 설정이 사용 가능한 경우, 에디터 설정을 직접 추출할 수 있습니다:
+
+```ts
+const fieldEditorConfig = editorConfigFactory.fromField({
+  field: config.collections[0].fields[1],
+})
+```
+
+### 옵션 3: 사용자 정의 에디터 설정 생성
+
+추가 기능을 지정하여 사용자 정의 에디터 구성을 생성할 수 있습니다:
+
+```ts
+import { FixedToolbarFeature } from '@payloadcms/richtext-lexical'
+
+const customEditorConfig = await editorConfigFactory.fromFeatures({
+  config,
+  features: ({ defaultFeatures }) => [
+    ...defaultFeatures,
+    FixedToolbarFeature(),
+  ],
+})
+```
+
+### 옵션 4: 인스턴스화된 에디터에서 추출
+
+전역적이거나 재사용 가능한 Lexical 에디터 인스턴스를 생성한 경우, 해당 구성에 액세스할 수 있습니다. 이 방법은 일반적으로 효율성이 떨어지므로 권장하지 않습니다:
+
+```ts
+const editor = lexicalEditor({
+  features: ({ defaultFeatures }) => [
+    ...defaultFeatures,
+    FixedToolbarFeature(),
+  ],
+})
+
+const instantiatedEditorConfig = await editorConfigFactory.fromEditor({
+  config,
+  editor,
+})
+```
+
+더 나은 효율성을 위해서는 `features`를 별도의 변수로 추출하고 이 방법 대신 `fromFeatures`를 사용하는 것을 고려하세요.
+
+### 예시 - 기존 필드에서 에디터 설정 검색하기
+
+정리된(sanitized) 컬렉션 설정에 액세스할 수 있다면, 모든 lexical richText 필드가 반환하는 lexical 정리된 에디터 설정에 액세스할 수 있습니다. 다음은 다른 필드의 afterRead 훅에서 이를 검색하는 방법의 예시입니다:
+
+```ts
+import type { CollectionConfig, RichTextField } from 'payload'
+
+import {
+  editorConfigFactory,
+  getEnabledNodes,
+  lexicalEditor,
+} from '@payloadcms/richtext-lexical'
+
+export const MyCollection: CollectionConfig = {
+  slug: 'slug',
+  fields: [
+    {
+      name: 'text',
+      type: 'text',
+      hooks: {
+        afterRead: [
+          ({ siblingFields, value }) => {
+            const field: RichTextField = siblingFields.find(
+              (field) => 'name' in field && field.name === 'richText',
+            ) as RichTextField
+
+            const editorConfig = editorConfigFactory.fromField({
+              field,
+            })
+
+            // 이제 에디터 설정을 사용할 수 있습니다
+
+            return value
+          },
+        ],
+      },
+    },
+    {
+      name: 'richText',
+      type: 'richText',
+      editor: lexicalEditor(),
+    },
+  ],
+}
+```

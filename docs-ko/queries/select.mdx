@@ -1,0 +1,188 @@
+---
+title: 선택
+label: 선택
+order: 30
+desc: Payload 선택은 결과에 어떤 필드들이 선택될지 결정합니다.
+keywords: query, documents, pagination, documentation, Content Management System, cms, headless, javascript, node, react, nextjs
+---
+
+기본적으로 Payload의 API는 주어진 컬렉션이나 글로벌의 _모든 필드_를 반환합니다. 하지만 모든 쿼리에 대해 모든 데이터가 필요하지 않을 수도 있습니다. 때로는 응답에서 몇 개의 필드만 원할 수도 있습니다.
+
+Select API를 사용하면 검색하려는 필드를 정확히 정의할 수 있습니다. 이는 데이터베이스의 부하와 응답의 크기에 영향을 줌으로써 쿼리의 성능에 영향을 미칠 수 있습니다.
+
+## 로컬 API
+
+[로컬 API](../local-api/overview)에서 `select`를 지정하려면 쿼리에서 `select` 옵션을 사용할 수 있습니다:
+
+```ts
+import type { Payload } from 'payload'
+
+// 포함 모드
+const getPosts = async (payload: Payload) => {
+  const posts = await payload.find({
+    collection: 'posts',
+    // highlight-start
+    select: {
+      text: true,
+      // 그룹에서 특정 필드 선택
+      group: {
+        number: true,
+      },
+      // 배열에서 모든 필드 선택
+      array: true,
+    },
+    // highlight-end
+  })
+
+  return posts
+}
+
+// 제외 모드
+const getPosts = async (payload: Payload) => {
+  const posts = await payload.find({
+    collection: 'posts',
+    // array와 group.number를 제외한 모든 것 선택
+    // highlight-start
+    select: {
+      array: false,
+      group: {
+        number: false,
+      },
+    },
+    // highlight-end
+  })
+
+  return posts
+}
+```
+
+<Banner type="warning">
+  **중요:** `select`로 효율적인 쿼리를 수행하기 위해 Payload는
+  데이터베이스 수준에서 `select` 쿼리를 구현합니다. 그 때문에
+  `beforeRead` 및 `afterRead` 훅이 전체 `doc`를 받지 못할 수도 있습니다.
+  `select` 쿼리와 관계없이 훅/액세스 제어를 위해 일부 필드가 항상
+  선택되도록 하려면 `forceSelect` 컬렉션 구성 속성을 사용할 수 있습니다.
+</Banner>
+
+## REST API
+
+[REST API](../rest-api/overview)에서 select를 지정하려면 쿼리에서 `select` 매개변수를 사용할 수 있습니다:
+
+```ts
+fetch(
+  // highlight-start
+  'https://localhost:3000/api/posts?select[color]=true&select[group][number]=true',
+  // highlight-end
+)
+  .then((res) => res.json())
+  .then((data) => console.log(data))
+```
+
+구문을 이해하려면 복잡한 URL 검색 문자열이 JSON 객체로 파싱된다는 것을 이해해야 합니다. 이것은 그렇게 나쁘지 않지만, 더 복잡한 쿼리는 불가피하게 작성하기 더 어려워집니다.
+
+이런 이유로, JSON/객체 형식의 쿼리를 쿼리 문자열로 파싱하기 위해 매우 유용하고 널리 사용되는 [`qs-esm`](https://www.npmjs.com/package/qs-esm) 패키지를 사용하는 것을 권장합니다:
+
+```ts
+import { stringify } from 'qs-esm'
+import type { Where } from 'payload'
+
+const select: Where = {
+  text: true,
+  group: {
+    number: true,
+  },
+  // 이 쿼리는 훨씬 더 복잡할 수 있고
+  // QS가 아름답게 처리할 것입니다
+}
+
+const getPosts = async () => {
+  const stringifiedQuery = stringify(
+    {
+      select, // `qs`가 `select` 속성도 추가하도록 확인!
+    },
+    { addQueryPrefix: true },
+  )
+
+  const response = await fetch(
+    `http://localhost:3000/api/posts${stringifiedQuery}`,
+  )
+  // 아래에서 응답을 계속 처리...
+}
+```
+
+<Banner type="info">
+  **알림:** 이는 `/api/globals` 엔드포인트를 사용하는 
+  [글로벌](../configuration/globals)에도 동일합니다.
+</Banner>
+
+## defaultPopulate 컬렉션 구성 속성
+
+`defaultPopulate` 속성을 사용하면 다른 문서에서 컬렉션을 채울 때 어떤 필드를 선택할지 지정할 수 있습니다. 이는 전체 문서 대신 `slug`만 필요한 링크에 특히 유용합니다.
+
+이 기능으로 [관계](/docs/fields/relationship) 또는 [업로드](/docs/fields/upload) 필드에서 채워지는 JSON의 양을 극적으로 줄일 수 있습니다.
+
+예를 들어, 콘텐츠 모델에서 다른 페이지로 연결되는 `Link` 필드가 있을 수 있습니다. 이러한 링크를 검색할 때 실제로는 페이지의 `slug`만 필요합니다.
+
+모든 페이지 콘텐츠, 관련 링크 및 기타 모든 것을 로드하는 것은 과도하고 Payload API를 느리게 만들 것입니다. 대신 `Pages` 컬렉션에 `defaultPopulate` 속성을 정의할 수 있습니다. 그러면 Payload가 관련 페이지를 "채울" 때 `slug` 필드만 선택하여 훨씬 적은 JSON을 반환합니다:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+// TSlug 제네릭을 전달하여 `defaultPopulate`에 대한 타입 안전성을 가질 수 있습니다.
+// 피하면 `defaultPopulate` 타입이 `SelectType`로 해결됩니다.
+export const Pages: CollectionConfig<'pages'> = {
+  slug: 'pages',
+  // `select`를 지정합니다.
+  defaultPopulate: {
+    slug: true,
+  },
+  fields: [
+    {
+      name: 'slug',
+      type: 'text',
+      required: true,
+    },
+  ],
+}
+```
+
+<Banner type="warning">
+  **중요:** [업로드](/docs/fields/upload)가 활성화된 컬렉션에서 `defaultPopulate`을
+  사용하고 `url` 필드를 선택하려면 `filename: true`도 지정하는 것이 중요합니다.
+  그렇지 않으면 Payload가 올바른 파일 URL을 구성할 수 없어서 `url: null`을
+  반환합니다.
+</Banner>
+
+## Populate
+
+`defaultPopulate`을 설정하면 Payload가 관련 문서의 "population"을 수행할 때마다 지정된 필드만 쿼리되고 반환됩니다. 그러나 로컬 및 REST API에서 `populate` 속성으로 `defaultPopulate`을 재정의할 수 있습니다:
+
+**로컬 API:**
+
+```ts
+import type { Payload } from 'payload'
+
+const getPosts = async (payload: Payload) => {
+  const posts = await payload.find({
+    collection: 'posts',
+    populate: {
+      // "pages" 컬렉션의 채워진 문서에서 `text`만 선택
+      // 이제 "pages" 컬렉션의 `defaultPopulate`이 무엇으로 설정되어 있든,
+      // 재정의되고 `text` 필드가 대신 반환됩니다.
+      pages: {
+        text: true,
+      }, // highlight-line
+    },
+  })
+
+  return posts
+}
+```
+
+**REST API:**
+
+```ts
+fetch('https://localhost:3000/api/posts?populate[pages][text]=true') // highlight-line
+  .then((res) => res.json())
+  .then((data) => console.log(data))
+```

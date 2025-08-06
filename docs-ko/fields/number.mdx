@@ -1,0 +1,187 @@
+---
+title: 숫자 필드
+label: 숫자
+order: 100
+desc: 숫자 필드는 숫자 데이터를 저장하고 유효성을 검사합니다. 숫자 필드 사용 및 형식 지정 방법을 알아보고 예제와 숫자 필드 옵션을 확인하세요.
+keywords: 숫자, 필드, 구성, 설정, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+숫자 필드는 숫자 입력을 저장하고 유효성을 검사하며 추가적인 수치 유효성 검사 및 형식 지정 기능을 지원합니다.
+
+<LightDarkImage
+  srcLight="https://payloadcms.com/images/docs/fields/number.png"
+  srcDark="https://payloadcms.com/images/docs/fields/number-dark.png"
+  alt="Payload 관리자 패널의 숫자 필드를 보여줍니다"
+  caption="숫자 필드의 관리자 패널 스크린샷"
+/>
+
+숫자 필드를 추가하려면 [필드 Config](./overview)에서 `type`을 `number`로 설정하세요:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyNumberField: Field = {
+  // ...
+  type: 'number', // highlight-line
+}
+```
+
+## 구성 옵션
+
+| 옵션                   | 설명                                                                                                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`name`** \*          | 데이터베이스에 저장되고 검색될 때 속성 이름으로 사용됩니다. [자세한 내용](/docs/fields/overview#field-names).                                                            |
+| **`label`**            | 관리자 패널에서 필드 레이블로 사용되는 텍스트 또는 각 언어의 키가 있는 객체.                                                                                              |
+| **`min`**              | 허용되는 최소값. 기본 `validation` 함수에서 사용됩니다.                                                                                                                   |
+| **`max`**              | 허용되는 최대값. 기본 `validation` 함수에서 사용됩니다.                                                                                                                   |
+| **`hasMany`**          | 이 필드를 단일 숫자가 아닌 정렬된 숫자 배열로 만듭니다.                                                                                                                   |
+| **`minRows`**          | `hasMany`가 true로 설정된 경우 숫자 배열의 최소 숫자 개수.                                                                                                                |
+| **`maxRows`**          | `hasMany`가 true로 설정된 경우 숫자 배열의 최대 숫자 개수.                                                                                                                |
+| **`unique`**           | 컬렉션의 각 항목이 이 필드에 대해 고유한 값을 갖도록 강제합니다.                                                                                                          |
+| **`index`**            | 더 빠른 쿼리를 생성하기 위해 이 필드에 대한 [인덱스](../database/indexes)를 구축합니다. 사용자가 이 필드의 데이터에 대해 자주 쿼리를 수행하는 경우 이 필드를 `true`로 설정하세요. |
+| **`validate`**         | 관리자 패널과 백엔드 모두에서 실행될 커스텀 유효성 검사 함수를 제공합니다. [자세한 내용](/docs/fields/overview#validation).                                              |
+| **`saveToJWT`**        | 이 필드가 최상위 수준이고 [인증](/docs/authentication/overview)을 지원하는 구성에 중첩된 경우 해당 데이터를 사용자 JWT에 포함합니다.                                    |
+| **`hooks`**            | 이 필드에 대한 로직을 제어하기 위해 필드 훅을 제공합니다. [자세한 내용](../hooks/fields).                                                                                  |
+| **`access`**           | 사용자가 이 필드의 데이터로 무엇을 보고 할 수 있는지 나타내는 필드 액세스 제어를 제공합니다. [자세한 내용](../access-control/fields).                                    |
+| **`hidden`**           | 모든 API에서 이 필드의 가시성을 완전히 제한합니다. 데이터베이스에는 여전히 저장되지만 API나 관리자 패널에는 표시되지 않습니다.                                           |
+| **`defaultValue`**     | 이 필드의 기본값으로 사용할 데이터를 제공합니다. [자세한 내용](/docs/fields/overview#default-values).                                                                    |
+| **`localized`**        | 이 필드에 대해 현지화를 활성화합니다. 기본 구성에서 [현지화가 활성화](/docs/configuration/localization)되어야 합니다.                                                    |
+| **`required`**         | 이 필드에 값이 있어야 합니다.                                                                                                                                             |
+| **`admin`**            | 관리자 특정 구성. [자세한 내용](#admin-options).                                                                                                                          |
+| **`custom`**           | 커스텀 데이터 추가를 위한 확장 지점 (예: 플러그인용)                                                                                                                      |
+| **`typescriptSchema`** | JSON 스키마 제공으로 필드 유형 생성을 재정의                                                                                                                              |
+| **`virtual`**          | 데이터베이스에서 필드를 비활성화하려면 `true`를 제공하거나 [관계와 필드를 연결](/docs/fields/relationship#linking-virtual-fields-with-relationships)하기 위해 문자열 경로를 제공합니다. [가상 필드](https://payloadcms.com/blog/learn-how-virtual-fields-can-help-solve-common-cms-challenges) 참조 |
+
+_\* 별표는 필수 속성을 나타냅니다._
+
+## 관리자 옵션
+
+[관리자 패널](../admin/overview)에서 숫자 필드의 모양과 동작을 커스터마이징하려면 `admin` 옵션을 사용할 수 있습니다:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyNumberField: Field = {
+  // ...
+  admin: {
+    // highlight-line
+    // ...
+  },
+}
+```
+
+숫자 필드는 기본 [필드 관리자 Config](./overview#admin-options)의 모든 기본 관리자 옵션을 상속하며, 다음과 같은 추가 옵션이 있습니다:
+
+| 속성               | 설명                                                                        |
+| ------------------ | --------------------------------------------------------------------------- |
+| **`step`**         | 브라우저 컨트롤을 사용하여 숫자 필드를 증가/감소시킬 값을 설정합니다.       |
+| **`placeholder`**  | 필드의 플레이스홀더 문자열을 정의하기 위해 이 속성을 설정합니다.            |
+| **`autoComplete`** | 브라우저 자동 완성에 사용될 문자열로 이 속성을 설정합니다.                  |
+
+## 예제
+
+`collections/ExampleCollection.ts`
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const ExampleCollection: CollectionConfig = {
+  slug: 'example-collection',
+  fields: [
+    {
+      name: 'age', // 필수
+      type: 'number', // 필수
+      required: true,
+      admin: {
+        step: 1,
+      },
+    },
+  ],
+}
+```
+
+## 커스텀 컴포넌트
+
+### 필드
+
+#### 서버 컴포넌트
+
+```tsx
+import type React from 'react'
+import { NumberField } from '@payloadcms/ui'
+import type { NumberFieldServerComponent } from 'payload'
+
+export const CustomNumberFieldServer: NumberFieldServerComponent = ({
+  clientField,
+  path,
+  schemaPath,
+  permissions,
+}) => {
+  return (
+    <NumberField
+      field={clientField}
+      path={path}
+      schemaPath={schemaPath}
+      permissions={permissions}
+    />
+  )
+}
+```
+
+#### 클라이언트 컴포넌트
+
+```tsx
+'use client'
+import React from 'react'
+import { NumberField } from '@payloadcms/ui'
+import type { NumberFieldClientComponent } from 'payload'
+
+export const CustomNumberFieldClient: NumberFieldClientComponent = (props) => {
+  return <NumberField {...props} />
+}
+```
+
+### 레이블
+
+#### 서버 컴포넌트
+
+```tsx
+import React from 'react'
+import { FieldLabel } from '@payloadcms/ui'
+import type { NumberFieldLabelServerComponent } from 'payload'
+
+export const CustomNumberFieldLabelServer: NumberFieldLabelServerComponent = ({
+  clientField,
+  path,
+}) => {
+  return (
+    <FieldLabel
+      label={clientField?.label || clientField?.name}
+      path={path}
+      required={clientField?.required}
+    />
+  )
+}
+```
+
+#### 클라이언트 컴포넌트
+
+```tsx
+'use client'
+import React from 'react'
+import { FieldLabel } from '@payloadcms/ui'
+import type { NumberFieldLabelClientComponent } from 'payload'
+
+export const CustomNumberFieldLabelClient: NumberFieldLabelClientComponent = ({
+  field,
+  path,
+}) => {
+  return (
+    <FieldLabel
+      label={field?.label || field?.name}
+      path={path}
+      required={field?.required}
+    />
+  )
+}
+```

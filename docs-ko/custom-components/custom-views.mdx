@@ -1,0 +1,360 @@
+---
+title: 뷰 사용자 정의하기
+label: 뷰 사용자 정의하기
+order: 40
+desc:
+keywords:
+---
+
+뷰는 대시보드, [목록 뷰](./list-view), [편집 뷰](./edit-view) 등 [관리 패널](../admin/overview)을 구성하는 개별 페이지입니다. 관리 패널을 사용자 정의하는 가장 강력한 방법 중 하나는 사용자 정의 뷰를 만드는 것입니다. 이는 내장 뷰를 대체하거나 완전히 새로운 뷰가 될 수 있는 [사용자 정의 컴포넌트](./overview)입니다.
+
+관리 패널에는 네 가지 유형의 뷰가 있습니다:
+
+- [루트 뷰](#root-views)
+- [컬렉션 뷰](#collection-views)
+- [글로벌 뷰](#global-views)
+- [문서 뷰](./document-views)
+
+자신만의 사용자 정의 뷰로 교체하려면 먼저 달성하려는 목표에 해당하는 범위를 결정하고, 사용 가능한 컴포넌트 목록을 참조한 다음, 그에 따라 [React 컴포넌트를 작성](#building-custom-views)하세요.
+
+## 구성
+
+### 뷰 교체
+
+뷰를 사용자 정의하려면 [Payload 구성](../configuration/overview)에서 `admin.components.views` 속성을 사용하세요. 이는 사용자 정의하려는 각 뷰에 대한 키를 가진 객체입니다. 각 키는 사용자 정의하려는 뷰에 해당합니다.
+
+사용 가능한 키의 정확한 목록은 [루트 뷰](#root-views), [컬렉션 뷰](#collection-views) 또는 [글로벌 뷰](#global-views)인지에 따라 사용자 정의하는 뷰의 범위에 따라 다릅니다. 범위에 관계없이 원리는 동일합니다.
+
+다음은 내장 뷰를 교체하는 방법의 예입니다:
+
+```ts
+import { buildConfig } from 'payload'
+
+const config = buildConfig({
+  // ...
+  admin: {
+    components: {
+      views: {
+        // highlight-start
+        dashboard: {
+          Component: '/path/to/MyCustomDashboard',
+        },
+        // highlight-end
+      },
+    },
+  },
+})
+```
+
+더 세밀한 제어를 위해 구성 객체를 대신 전달하세요. Payload는 각 뷰에 대해 다음 속성을 노출합니다:
+
+| 속성            | 설명                                                                                                                                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Component` \* | 사용자가 이 경로로 탐색할 때 렌더링되어야 하는 컴포넌트 경로를 전달합니다.                                                                                                                     |
+| `path` \*      | [`path-to-regexp`](https://www.npmjs.com/package/path-to-regex)가 이해하는 유효한 URL 경로 또는 경로 배열입니다. 슬래시(`/`)로 시작해야 합니다.                                       |
+| `exact`        | 불린값. true인 경우, 경로가 `usePathname()`와 정확히 일치하는 경우에만 일치합니다.                                                                                                                |
+| `strict`       | true인 경우, 후행 슬래시가 있는 경로는 후행 슬래시가 있는 `location.pathname`와만 일치합니다. 경로명에 추가 URL 세그먼트가 있는 경우에는 효과가 없습니다. |
+| `sensitive`    | true인 경우, 경로가 대소문자를 구분하는 경우 일치합니다.                                                                                                                                |
+| `meta`         | 관리 패널 내에서 이 뷰에 적용할 페이지 메타데이터 재정의입니다. [자세한 내용](../admin/metadata).                                                                                            |
+
+_\* 별표는 필수 속성을 나타냅니다._
+
+### 새로운 뷰 추가
+
+[관리 패널](../admin/overview)에 _새로운_ 뷰를 추가하려면 단순히 `views` 객체에 자신만의 키를 추가하세요. 이는 모든 뷰 범위에 해당합니다.
+
+새로운 뷰에는 최소한 `Component`와 `path` 속성이 필요합니다:
+
+```ts
+import { buildConfig } from 'payload'
+
+const config = buildConfig({
+  // ...
+  admin: {
+    components: {
+      views: {
+        // highlight-start
+        myCustomView: {
+          Component: '/path/to/MyCustomView#MyCustomViewComponent',
+          path: '/my-custom-view',
+        },
+        // highlight-end
+      },
+    },
+  },
+})
+```
+
+<Banner type="warning">
+  **참고:** 경로는 캐스케이딩되므로 명시적으로 `exact` 속성이 주어지지 않는 한,
+  경로의 경로로 단순히 _시작하는_ URL에서 일치합니다.
+  이는 애플리케이션에서 캐치올 경로를 생성할 때 유용합니다.
+  또는 상위 경로 _이전에_ 중첩된 경로를 정의하세요.
+</Banner>
+
+## 사용자 정의 뷰 구축
+
+사용자 정의 뷰는 페이지 레벨에서 렌더링되는 단순한 [사용자 정의 컴포넌트](./overview)입니다. 사용자 정의 뷰는 [기존 뷰를 대체](#replacing-views)하거나 [완전히 새로운 뷰를 추가](#adding-new-views)할 수 있습니다. 사용자 정의하는 뷰의 유형에 관계없이 프로세스는 일반적으로 동일합니다.
+
+사용자 정의 뷰를 구축하는 방법을 이해하려면 먼저 [사용자 정의 컴포넌트 구축](./overview#building-custom-components) 가이드를 검토하세요. 사용자 정의 컴포넌트가 준비되면 이를 사용자 정의 뷰로 사용할 수 있습니다.
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollectionConfig: CollectionConfig = {
+  // ...
+  admin: {
+    components: {
+      views: {
+        // highlight-start
+        edit: {
+          Component: '/path/to/MyCustomView', // highlight-line
+        },
+        // highlight-end
+      },
+    },
+  },
+}
+```
+
+### 기본 Props
+
+사용자 정의 뷰에는 다음 props가 제공됩니다:
+
+| Prop             | 설명                                                                                                                        |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `initPageResult` | `req`, `payload`, `permissions` 등을 포함하는 객체입니다.                                                                         |
+| `clientConfig`   | 클라이언트 구성 객체입니다. [자세한 내용](./overview#accessing-the-payload-config).                                                 |
+| `importMap`      | 가져오기 맵 객체입니다.                                                                                                             |
+| `params`         | [동적 경로 매개변수](https://nextjs.org/docs/app/building-your-application/routing/dynamic-routes)를 포함하는 객체입니다. |
+| `searchParams`   | [검색 매개변수](https://developer.mozilla.org/docs/Learn/Common_questions/What_is_a_URL#parameters)를 포함하는 객체입니다.  |
+| `doc`            | 편집 중인 문서입니다. 문서 뷰에서만 사용 가능합니다. [자세한 내용](./document-views).                                     |
+| `i18n`           | [i18n](../configuration/i18n) 객체입니다.                                                                                          |
+| `payload`        | [Payload](../local-api/overview) 클래스입니다.                                                                                        |
+
+<Banner type="warning">
+  **참고:** 일부 뷰는 [컬렉션 뷰](#collection-views) 및 [글로벌 뷰](#global-views)와
+  같은 추가 props를 받을 수 있습니다. 자세한 내용은 관련 섹션을 참조하세요.
+</Banner>
+
+다음은 사용자 정의 뷰 컴포넌트의 예입니다:
+
+```tsx
+import type { AdminViewServerProps } from 'payload'
+
+import { Gutter } from '@payloadcms/ui'
+import React from 'react'
+
+export function MyCustomView(props: AdminViewServerProps) {
+  return (
+    <Gutter>
+      <h1>사용자 정의 기본 루트 뷰</h1>
+      <p>이 뷰는 기본 템플릿을 사용합니다.</p>
+    </Gutter>
+  )
+}
+```
+
+<Banner type="success">
+  **팁:** 일관된 레이아웃과 탐색을 위해 내장 [템플릿](./overview#templates) 중 하나로
+  사용자 정의 뷰를 래핑할 수 있습니다.
+</Banner>
+
+### 뷰 템플릿
+
+사용자 정의 루트 뷰는 선택적으로 Payload가 제공하는 템플릿 중 하나를 사용할 수 있습니다. 이 중 가장 일반적인 것은 기본 레이아웃과 탐색을 제공하는 기본 템플릿입니다.
+
+다음은 사용자 정의 뷰에서 기본 템플릿을 사용하는 방법의 예입니다:
+
+```tsx
+import type { AdminViewServerProps } from 'payload'
+
+import { DefaultTemplate } from '@payloadcms/next/templates'
+import { Gutter } from '@payloadcms/ui'
+import React from 'react'
+
+export function MyCustomView({
+  initPageResult,
+  params,
+  searchParams,
+}: AdminViewServerProps) {
+  return (
+    <DefaultTemplate
+      i18n={initPageResult.req.i18n}
+      locale={initPageResult.locale}
+      params={params}
+      payload={initPageResult.req.payload}
+      permissions={initPageResult.permissions}
+      searchParams={searchParams}
+      user={initPageResult.req.user || undefined}
+      visibleEntities={initPageResult.visibleEntities}
+    >
+      <Gutter>
+        <h1>사용자 정의 기본 루트 뷰</h1>
+        <p>이 뷰는 기본 템플릿을 사용합니다.</p>
+      </Gutter>
+    </DefaultTemplate>
+  )
+}
+```
+
+### 사용자 정의 뷰 보안
+
+모든 사용자 정의 뷰는 기본적으로 공개입니다. 사용자 정의 뷰를 보호하는 것은 사용자의 책임입니다. 뷰에 사용자가 로그인하거나 특정 접근 권한을 가져야 하는 경우, 뷰 컴포넌트 내에서 직접 처리해야 합니다.
+
+다음은 사용자 정의 뷰를 보호하는 방법입니다:
+
+```tsx
+import type { AdminViewServerProps } from 'payload'
+
+import { Gutter } from '@payloadcms/ui'
+import React from 'react'
+
+export function MyCustomView({ initPageResult }: AdminViewServerProps) {
+  const {
+    req: { user },
+  } = initPageResult
+
+  if (!user) {
+    return <p>이 페이지를 보려면 로그인해야 합니다.</p>
+  }
+
+  return (
+    <Gutter>
+      <h1>사용자 정의 기본 루트 뷰</h1>
+      <p>이 뷰는 기본 템플릿을 사용합니다.</p>
+    </Gutter>
+  )
+}
+```
+
+## 루트 뷰
+
+루트 뷰는 [관리 패널](../admin/overview)의 주요 뷰입니다. 이는 대시보드나 계정 뷰와 같이 `/admin` 경로 바로 아래에 범위가 지정된 뷰입니다.
+
+루트 뷰를 자신만의 뷰로 [교체](#replacing-views)하거나 [완전히 새로운 뷰를 생성](#adding-new-views)하려면 [Payload 구성](../configuration/overview)의 루트에서 `admin.components.views` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+const config = buildConfig({
+  // ...
+  admin: {
+    components: {
+      views: {
+        // highlight-start
+        dashboard: {
+          Component: '/path/to/Dashboard',
+        },
+        // highlight-end
+        // 다른 옵션은 다음과 같습니다:
+        // - account
+        // - [key: string]
+        // 자세한 내용은 아래를 참조하세요
+      },
+    },
+  },
+})
+```
+
+_사용 가능한 모든 props를 포함하여 사용자 정의 뷰를 구축하는 방법에 대한 자세한 내용은 [사용자 정의 뷰 구축](#building-custom-views)을 참조하세요._
+
+다음 옵션을 사용할 수 있습니다:
+
+| 속성        | 설명                                                                                     |
+| ----------- | ----------------------------------------------------------------------------------------------- |
+| `account`   | 계정 뷰는 현재 로그인한 사용자의 계정 페이지를 표시하는 데 사용됩니다.                   |
+| `dashboard` | 관리 패널의 메인 랜딩 페이지입니다.                                                       |
+| `[key]`     | 다른 모든 키는 완전히 새로운 루트 뷰를 추가하는 데 사용할 수 있습니다. [자세한 내용](#adding-new-views). |
+
+## 컬렉션 뷰
+
+컬렉션 뷰는 컬렉션 목록 및 문서 편집 뷰와 같이 `/collections` 경로 아래에 범위가 지정된 뷰입니다.
+
+컬렉션 뷰를 자신만의 뷰로 [교체](#replacing-views)하거나 [완전히 새로운 뷰를 생성](#adding-new-views)하려면 [컬렉션 구성](../configuration/collections)의 `admin.components.views` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollectionConfig: CollectionConfig = {
+  // ...
+  admin: {
+    components: {
+      views: {
+        // highlight-start
+        edit: {
+          default: {
+            Component: '/path/to/MyCustomCollectionView',
+          },
+        },
+        // highlight-end
+        // 다른 옵션은 다음과 같습니다:
+        // - list
+        // - [key: string]
+        // 자세한 내용은 아래를 참조하세요
+      },
+    },
+  },
+}
+```
+
+<Banner type="success">
+  **알림:** `edit` 키는 동일한 컬렉션 문서와 관련된 문서 뷰라고 하는
+  다양한 중첩된 뷰로 구성됩니다. [자세한
+  내용](./document-views).
+</Banner>
+
+다음 옵션을 사용할 수 있습니다:
+
+| 속성     | 설명                                                                                                                                     |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `edit`   | 편집 뷰는 주어진 컬렉션의 단일 문서에 해당하며 다양한 중첩된 뷰로 구성됩니다. [자세한 내용](./document-views). |
+| `list`   | 목록 뷰는 주어진 컬렉션의 문서 목록을 표시하는 데 사용됩니다. [자세한 내용](#list-view).                                         |
+| `[key]`  | 다른 모든 키는 완전히 새로운 컬렉션 뷰를 추가하는 데 사용할 수 있습니다. [자세한 내용](#adding-new-views).                                           |
+
+_사용 가능한 모든 props를 포함하여 사용자 정의 뷰를 구축하는 방법에 대한 자세한 내용은 [사용자 정의 뷰 구축](#building-custom-views)을 참조하세요._
+
+## 글로벌 뷰
+
+글로벌 뷰는 편집 뷰와 같이 `/globals` 경로 아래에 범위가 지정된 뷰입니다.
+
+글로벌 뷰를 자신만의 뷰로 [교체](#replacing-views)하거나 [완전히 새로운 뷰를 생성](#adding-new-views)하려면 [글로벌 구성](../configuration/globals)에서 `admin.components.views` 속성을 사용하세요:
+
+```ts
+import type { SanitizedGlobalConfig } from 'payload'
+
+export const MyGlobalConfig: SanitizedGlobalConfig = {
+  // ...
+  admin: {
+    components: {
+      views: {
+        // highlight-start
+        edit: {
+          default: {
+            Component: '/path/to/MyCustomGlobalView',
+          },
+        },
+        // highlight-end
+        // 다른 옵션은 다음과 같습니다:
+        // - [key: string]
+        // 자세한 내용은 아래를 참조하세요
+      },
+    },
+  },
+}
+```
+
+<Banner type="success">
+  **알림:** `edit` 키는 동일한 글로벌 문서와 관련된 문서 뷰라고 하는
+  다양한 중첩된 뷰로 구성됩니다. [자세한
+  내용](./document-views).
+</Banner>
+
+다음 옵션을 사용할 수 있습니다:
+
+| 속성     | 설명                                                                                                                             |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `edit`   | 편집 뷰는 주어진 글로벌의 단일 문서를 나타내며 다양한 중첩된 뷰로 구성됩니다. [자세한 내용](./document-views). |
+| `[key]`  | 다른 모든 키는 완전히 새로운 글로벌 뷰를 추가하는 데 사용할 수 있습니다. [자세한 내용](#adding-new-views).                                       |
+
+_사용 가능한 모든 props를 포함하여 사용자 정의 뷰를 구축하는 방법에 대한 자세한 내용은 [사용자 정의 뷰 구축](#building-custom-views)을 참조하세요._

@@ -1,0 +1,70 @@
+---
+title: 일반 텍스트 변환
+label: 일반 텍스트 변환
+order: 24
+desc: lexical richtext와 일반 텍스트 간의 변환
+keywords: lexical, richtext, plaintext, text
+---
+
+## Richtext를 일반 텍스트로 변환
+
+`@payloadcms/richtext-lexical/plaintext`를 사용하여 richtext 데이터를 일반 텍스트로 변환하는 방법입니다.
+
+```ts
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+
+import { convertLexicalToPlaintext } from '@payloadcms/richtext-lexical/plaintext'
+
+// 여기에 richtext 데이터
+const data: SerializedEditorState = {}
+
+const plaintext = convertLexicalToPlaintext({ data })
+```
+
+### 커스텀 변환기
+
+`convertLexicalToPlaintext` 함수는 특정 노드를 일반 텍스트로 변환하는 방법을 커스터마이즈할 수 있는 `converters` 객체를 허용합니다.
+
+```ts
+import type {
+  DefaultNodeTypes,
+  SerializedBlockNode,
+} from '@payloadcms/richtext-lexical'
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+import type { MyTextBlock } from '@/payload-types'
+
+import {
+  convertLexicalToPlaintext,
+  type PlaintextConverters,
+} from '@payloadcms/richtext-lexical/plaintext'
+
+// 여기에 richtext 데이터
+const data: SerializedEditorState = {}
+
+const converters: PlaintextConverters<
+  DefaultNodeTypes | SerializedBlockNode<MyTextBlock>
+> = {
+  blocks: {
+    textBlock: ({ node }) => {
+      return node.fields.text ?? ''
+    },
+  },
+  link: ({ node }) => {
+    return node.fields.url ?? ''
+  },
+}
+
+const plaintext = convertLexicalToPlaintext({
+  converters,
+  data,
+})
+```
+
+다른 변환기와 달리 일반 텍스트에는 기본 변환기가 없습니다.
+
+노드에 정의된 변환기가 없는 경우 다음 휴리스틱을 사용하여 일반 텍스트로 변환됩니다:
+
+- 노드에 `text` 필드가 있으면 일반 텍스트로 사용됩니다.
+- 노드에 `children` 필드가 있으면 하위 요소가 재귀적으로 일반 텍스트로 변환됩니다.
+- 둘 다 없으면 무시됩니다.
+- 단락, 텍스트 및 탭 노드는 줄바꿈 / 탭 문자를 삽입합니다.

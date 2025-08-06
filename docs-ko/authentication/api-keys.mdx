@@ -1,0 +1,81 @@
+---
+title: API 키 전략
+label: API 키 전략
+order: 50
+desc: API 키 기반 인증을 활성화하여 Payload와 인터페이스하세요.
+keywords: 인증, 구성, 설정, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+타사 API나 서비스와 통합하려면 Payload 내에서 특정 사용자로 식별할 수 있는 API 키를 생성하는 기능이 필요할 수 있습니다. API 키는 이메일과 비밀번호와 유사하게 사용자별로 생성되며, 단일 사용자를 나타내는 역할을 합니다.
+
+예를 들어, Payload에 대해 보호된 작업을 수행해야 하는 타사 서비스나 외부 앱이 있는 경우, 먼저 Payload 내에서 사용자를 생성해야 합니다(예: `dev@thirdparty.com`). 외부 애플리케이션에서는 해당 사용자로 인증해야 하며, 두 가지 옵션이 있습니다:
+
+1. 해당 사용자로 매번 로그인하여 요청에 사용할 만료되는 토큰을 받습니다.
+1. 해당 사용자를 위해 만료되지 않는 API 키를 생성하여 요청에 사용합니다.
+
+<Banner type="success">
+  **팁:**
+
+이는 특정 외부 서비스와의 통합을 반영하는 "사용자"를 생성하고 해당 서비스/통합에서만 필요한 "역할"이나 특정 접근 권한을 할당할 수 있어 특히 유용합니다.
+
+</Banner>
+
+기술적으로 이 두 옵션 모두 타사 통합에 작동하지만, API 키를 사용하는 두 번째 옵션이 더 간단합니다. 통합에서 적절히 인증되기 위해 해야 할 작업의 양을 줄여주기 때문입니다.
+
+컬렉션에서 API 키를 활성화하려면 `useAPIKey` auth 옵션을 `true`로 설정하세요. 그러면 컬렉션 내 각 문서에 대해 [관리자 패널](../admin/overview)에서 컬렉션의 각 사용자를 위한 API 키를 생성할 수 있는 새로운 인터페이스가 나타납니다.
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const ThirdPartyAccess: CollectionConfig = {
+  slug: 'third-party-access',
+  auth: {
+    useAPIKey: true, // highlight-line
+  },
+  fields: [],
+}
+```
+
+사용자 API 키는 데이터베이스 내에서 암호화되므로, 데이터베이스가 침해되더라도 API 키는 안전합니다.
+
+<Banner type="warning">
+  **중요:**
+  `PAYLOAD_SECRET`을 변경하면 API 키를 재생성해야 합니다.
+
+비밀 키는 API 키를 암호화하는 데 사용되므로, 비밀을 변경하면 기존 API 키는 더 이상 유효하지 않습니다.
+
+</Banner>
+
+### HTTP 인증
+
+API 키를 사용하여 REST나 GraphQL API 요청을 인증하려면 `Authorization` 헤더를 설정하세요. 헤더는 대소문자를 구분하며 `auth.useAPIKey`가 활성화된 컬렉션의 slug, 그 다음 " API-Key ", 그리고 할당된 `apiKey`가 필요합니다. Payload의 내장 미들웨어가 사용자 문서를 `req.user`에 할당하고 적절한 [접근 제어](../access-control/overview)로 요청을 처리합니다. 이렇게 함으로써 Payload는 해당 API 키와 연결된 사용자의 요청으로 인식합니다.
+
+**예를 들어, Fetch 사용:**
+
+```ts
+import Users from '../collections/Users'
+
+const response = await fetch('http://localhost:3000/api/pages', {
+  headers: {
+    Authorization: `${Users.slug} API-Key ${YOUR_API_KEY}`,
+  },
+})
+```
+
+Payload는 모든 인증 전략에서 동일하고 일관된 [접근 제어](../access-control/overview)가 사용되도록 보장합니다. 이를 통해 API 키와 표준 이메일/비밀번호 인증 모두에서 기존 접근 제어 구성을 활용할 수 있습니다. 이러한 일관성은 API 키에 대한 세밀한 제어를 유지하는 데 도움이 됩니다.
+
+### API 키 전용 인증
+
+컬렉션에서 API 키만을 인증 방법으로 사용하려면 컬렉션의 `auth` 속성에서 `disableLocalStrategy`를 `true`로 설정하여 기본 로컬 전략을 비활성화할 수 있습니다. 이렇게 하면 이메일과 비밀번호로 인증하는 기능이 비활성화되고, API 키를 통한 인증만 허용됩니다.
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const ThirdPartyAccess: CollectionConfig = {
+  slug: 'third-party-access',
+  auth: {
+    useAPIKey: true,
+    disableLocalStrategy: true, // highlight-line
+  },
+}
+```

@@ -1,0 +1,155 @@
+---
+title: 플러그인
+label: 개요
+order: 10
+desc: 플러그인은 Payload 기능을 사용하기 쉬운 향상 및 확장으로 모듈화하여 Payload 앱을 개선하는 훌륭한 방법을 제공합니다.
+keywords: 플러그인, 구성, 설정, 확장, 커스텀, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+Payload 플러그인은 [Payload Config](../configuration/overview)의 모듈성을 최대한 활용하여 개발자가 매우 작은 접점에서 Payload 앱에 커스텀한 때로는 복잡한 기능을 쉽게 주입할 수 있게 해줍니다. 이는 여러 프로젝트나 더 큰 Payload 커뮤니티에서 작업을 공유하는 데 특히 유용합니다.
+
+[폼 빌더 플러그인](./form-builder)이나 [SEO 플러그인](./seo)과 같은 가장 일반적인 사용 사례에 대한 솔루션을 제공하는 많은 [공식 플러그인](#official-plugins)이 있습니다. 기여하는 구성원들이 완전히 유지 관리하는 [커뮤니티 플러그인](#community-plugins)도 있습니다. 다른 방식으로 Payload의 기능을 확장하려면 쉽게 [자체 플러그인을 빌드](./build-your-own)할 수 있습니다.
+
+플러그인을 구성하려면 [Payload Config](../configuration/overview)에서 `plugins` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+const config = buildConfig({
+  // ...
+  // highlight-start
+  plugins: [
+    // 여기에 플러그인 추가
+  ],
+  // highlight-end
+})
+```
+
+플러그인을 작성하는 것은 일반적인 JavaScript를 작성하는 것보다 더 복잡하지 않습니다. [콜백 함수](https://developer.mozilla.org/en-US/docs/Glossary/Callback_function)의 기본 개념이나 [전개 구문](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax)이 어떻게 작동하는지 알고 있고 Payload 개념을 이해하고 있다면 플러그인 작성은 쉬울 것입니다.
+
+<Banner type="success">
+  간단한 구성 기반 구조에 의존하기 때문에 Payload 플러그인은 단순히
+  기존 구성을 받아서 새로운 필드, 훅, 컬렉션, 관리자 뷰 또는
+  생각할 수 있는 기타 모든 것이 포함된 _수정된_ 구성을 반환합니다.
+</Banner>
+
+**사용 사례 예:**
+
+- 데이터가 추가되거나 변경될 때 특정 컬렉션의 데이터를 HubSpot 또는 유사한 CRM에 자동으로 동기화
+- 특정 문서에 비밀번호 보호 기능 추가
+- 모든 Payload 앱에 전체 전자상거래 백엔드 추가
+- Payload 관리자 패널에 커스텀 보고 뷰 추가
+- 특정 컬렉션의 데이터 암호화
+- 전체 폼 빌더 구현 추가
+- 모든 `upload` 활성화 컬렉션을 S3 또는 Cloudinary와 같은 타사 파일 호스트와 통합
+- 생각할 수 있는 모든 유형의 커스텀 기능과 함께 커스텀 엔드포인트 또는 GraphQL 쿼리/변형 추가
+
+## 공식 플러그인
+
+Payload는 일반적인 사용 사례에 대한 솔루션을 제공하는 공식 플러그인 세트를 유지 관리합니다. 이러한 플러그인은 Payload 팀과 기여자들에 의해 유지 관리되며 안정적이고 최신 상태로 유지되도록 보장됩니다.
+
+- [폼 빌더](./form-builder)
+- [중첩 문서](./nested-docs)
+- [리디렉트](./redirects)
+- [검색](./search)
+- [Sentry](./sentry)
+- [SEO](./seo)
+- [Stripe](./stripe)
+- [가져오기/내보내기](./import-export)
+
+다른 방식으로 Payload의 기능을 쉽게 확장하기 위해 [자체 플러그인을 빌드](./build-your-own)할 수도 있습니다. 플러그인이 준비되면 [커뮤니티와 공유](#community-plugins)하는 것을 고려해보세요.
+
+플러그인은 매일 변화하고 있으므로 어떤 새로운 플러그인이 추가되었는지 확인하기 위해 자주 확인하세요. 보고 싶은 특정 플러그인이 있다면 새로운 [토론](https://github.com/payloadcms/payload/discussions)을 시작하는 것을 망설이지 마세요.
+
+<Banner type="warning">
+  공식 플러그인의 전체 목록을 보려면 [Payload 모노레포](https://github.com/payloadcms/payload)의
+  [패키지 디렉토리](https://github.com/payloadcms/payload/tree/main/packages)를 방문하세요.
+</Banner>
+
+## 커뮤니티 플러그인
+
+커뮤니티 플러그인은 외부 기여자들이 완전히 유지 관리하는 플러그인입니다. 다른 사람들이 사용할 수 있도록 생태계 전반에 걸쳐 작업을 공유하는 훌륭한 방법입니다. [GitHub](https://github.com/topics/payload-plugin)에서 `payload-plugin` 토픽을 검색하여 커뮤니티 플러그인을 발견할 수 있습니다.
+
+[Lexical 플러그인](https://github.com/AlessioGr/payload-plugin-lexical)과 같이 일부 플러그인은 널리 사용되어 [공식 플러그인](#official-plugins)으로 채택되기도 합니다. 공식 플러그인이 되어야 한다고 생각하는 플러그인이 있다면 새로운 [토론](https://github.com/payloadcms/payload/discussions)을 시작하는 것을 망설이지 마세요.
+
+<Banner type="warning">
+  다른 사람들이 사용할 수 있도록 플러그인을 빌드하는 유지 관리자는
+  다른 사람들이 찾을 수 있도록 [GitHub](https://github.com/topics/payload-plugin)에
+  `payload-plugin` 토픽을 추가해 주세요.
+</Banner>
+
+## 예제
+
+기본 [Payload Config](../configuration/overview)는 [플러그인 Config](./build-your-own)의 `배열`을 받는 `plugins` 속성을 허용합니다.
+
+```ts
+import { buildConfig } from 'payload'
+import { addLastModified } from './addLastModified.ts'
+
+const config = buildConfig({
+  // ...
+  // highlight-start
+  plugins: [addLastModified],
+  // highlight-end
+})
+```
+
+<Banner type="warning">
+  Payload 플러그인은 들어오는 구성이 검증된 _후_ 실행되지만
+  삭제되고 기본 옵션이 병합되기 _전에_ 실행됩니다. 모든 플러그인이
+  실행된 후 모든 플러그인이 포함된 전체 구성이 삭제됩니다.
+</Banner>
+
+다음은 위의 `addLastModified` 플러그인이 어떻게 보일 수 있는지에 대한 예제입니다. 모든 Payload 컬렉션에 `lastModifiedBy` 필드를 추가합니다. 자세한 내용은 [자체 플러그인을 빌드하는 방법](./build-your-own)을 참조하세요.
+
+```ts
+import { Config, Plugin } from 'payload'
+
+export const addLastModified: Plugin = (incomingConfig: Config): Config => {
+  // 모든 들어오는 인증 활성화 컬렉션을 찾아서
+  // 모든 인증 컬렉션에 대해
+  // lastModifiedBy 관계 필드를 생성할 수 있도록 합니다
+  const authEnabledCollections = incomingConfig.collections.filter(
+    (collection) => Boolean(collection.auth),
+  )
+
+  // 기존 구성 전개
+  const config: Config = {
+    ...incomingConfig,
+    collections: incomingConfig.collections.map((collection) => {
+      // 수정하는 각 항목을 전개하고
+      // 새 필드를 추가 - 훅과 적절한 관리자 UI 구성 포함
+      return {
+        ...collection,
+        fields: [
+          ...collection.fields,
+          {
+            name: 'lastModifiedBy',
+            type: 'relationship',
+            relationTo: authEnabledCollections.map(({ slug }) => slug),
+            hooks: {
+              beforeChange: [
+                ({ req }) => ({
+                  value: req?.user?.id,
+                  relationTo: req?.user?.collection,
+                }),
+              ],
+            },
+            admin: {
+              position: 'sidebar',
+              readOnly: true,
+            },
+          },
+        ],
+      }
+    }),
+  }
+
+  return config
+}
+```
+
+<Banner type="success">
+  **알림:** 자체 Payload 플러그인을 만드는 방법에 대한 더 자세한 설명은
+  [자체 플러그인을 빌드하는 방법](./build-your-own)을 참조하세요.
+</Banner>

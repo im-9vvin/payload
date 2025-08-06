@@ -1,0 +1,75 @@
+---
+title: Jobs
+label: Jobs
+order: 40
+desc: Job은 API에서 오프로드되어 나중에 처리될 작업 집합입니다.
+keywords: jobs queue, application framework, typescript, node, react, nextjs
+---
+
+이제 Tasks와 Workflows를 다루었으므로, Job이라는 개념으로 이들을 연결할 수 있습니다.
+
+<Banner type="default">
+  비즈니스 로직을 제어하는 Workflows와 Tasks를 정의하는 반면,
+  **Job**은 많은 작업을 포함하는 Task 또는 Workflow의 개별 인스턴스입니다.
+</Banner>
+
+예를 들어, Payload에서 타사 시스템으로 정보를 동기화하는 로직을 설명하는 Workflow나 Task가 있다고 가정해봅시다. 이는 해당 정보를 동기화하는 방법을 선언하는 것이지만 그 자체로는 아무것도 수행하지 않습니다. 해당 작업이나 워크플로를 실행하려면 해당 Task나 Workflow를 참조하는 Job을 생성해야 합니다.
+
+Jobs는 `payload-jobs` collection의 Payload 데이터베이스에 저장되며, 모든 job의 실행 목록을 유지하거나 성공적으로 실행되었을 때 job을 삭제하도록 Payload를 구성할 수 있습니다.
+
+#### 새로운 job 대기열에 추가
+
+job을 대기열에 추가하려면 `payload.jobs.queue` 함수를 사용할 수 있습니다.
+
+`createPostAndUpdate` 워크플로를 실행할 새로운 Job을 대기열에 추가하는 방법은 다음과 같습니다:
+
+```ts
+const createdJob = await payload.jobs.queue({
+  // 워크플로의 이름 전달
+  workflow: 'createPostAndUpdate',
+  // input 타입은 자동으로 타입됩니다
+  // 이 워크플로에 대해 정의한 input에 따라
+  input: {
+    title: 'my title',
+  },
+})
+```
+
+Workflows를 기반으로 새로운 Jobs를 대기열에 추가할 수 있는 것 외에도, 단일 Task에 대한 job을 대기열에 추가할 수도 있습니다:
+
+```ts
+const createdJob = await payload.jobs.queue({
+  task: 'createPost',
+  input: {
+    title: 'my title',
+  },
+})
+```
+
+#### Jobs 취소
+
+Payload를 사용하면 대기열에 있거나 현재 실행 중인 job을 취소할 수 있습니다. 실행 중인 job을 취소할 때 현재 작업은 실행을 완료하지만 후속 작업은 실행되지 않습니다. 이는 job이 작업 사이에서 취소 상태를 확인하기 때문입니다.
+
+##### 단일 Job 취소
+
+특정 job을 취소하려면 job의 ID와 함께 `payload.jobs.cancelByID` 메서드를 사용하세요:
+
+```ts
+await payload.jobs.cancelByID({
+  id: createdJob.id,
+})
+```
+
+##### 여러 Jobs 취소
+
+여러 job을 한 번에 취소하려면 `Where` 쿼리와 함께 `payload.jobs.cancel` 메서드를 사용하세요:
+
+```ts
+await payload.jobs.cancel({
+  where: {
+    workflowSlug: {
+      equals: 'createPost',
+    },
+  },
+})
+```

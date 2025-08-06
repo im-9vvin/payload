@@ -1,0 +1,233 @@
+---
+title: 프리뷰
+label: 프리뷰
+order: 30
+desc: 프론트엔드 링크를 활성화하여 게시된 콘텐츠 또는 초안 콘텐츠를 미리보세요.
+keywords: 관리자, 컴포넌트, 프리뷰, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+프리뷰는 프론트엔드 애플리케이션에 대한 직접 링크를 생성할 수 있는 기능입니다. 활성화되면 [관리자 패널](./overview) 내의 편집 뷰에서 제공한 URL을 가리키는 href가 있는 "프리뷰" 버튼이 나타납니다. 이는 편집자들에게 해당 문서 데이터가 표시되는 프론트엔드 애플리케이션으로 빠르게 이동할 수 있는 방법을 제공합니다. 그렇지 않으면 복잡한 앱에서 특히 항상 직관적이지 않은 URL을 직접 결정해야 합니다.
+
+프리뷰 기능은 "초안 프리뷰"라고 알려진 것을 달성하는 데도 사용할 수 있습니다. 초안 프리뷰를 사용하면 프론트엔드 애플리케이션으로 이동하여 "초안 모드"에 들어갈 수 있습니다. 여기서 쿼리가 게시된 콘텐츠 대신 초안 콘텐츠를 가져오도록 수정됩니다. 이는 콘텐츠가 게시되기 전에 어떻게 보일지 확인하는 데 유용합니다. [자세한 내용](#draft-preview).
+
+<Banner type="warning">
+  **참고:** 프리뷰는 [라이브 프리뷰](../live-preview/overview)와 다릅니다.
+  라이브 프리뷰는 iframe 내에서 앱을 로드하고 관리자 패널에서 렌더링하여
+  실시간으로 변경 사항을 볼 수 있게 해줍니다. 반면 프리뷰는 프론트엔드
+  애플리케이션에 대한 직접 링크를 생성할 수 있게 해줍니다.
+</Banner>
+
+프리뷰를 추가하려면 모든 [컬렉션 Config](../configuration/collections#admin-options) 또는 [글로벌 Config](../configuration/globals#admin-options)의 `admin.preview` 속성에 함수를 전달하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const Pages: CollectionConfig = {
+  slug: 'pages',
+  admin: {
+    preview: ({ slug }) => `http://localhost:3000/${slug}`,
+  },
+  fields: [
+    {
+      name: 'slug',
+      type: 'text',
+    },
+  ],
+}
+```
+
+## 옵션
+
+`preview` 함수는 추가 URL 매개변수와 함께 프론트엔드 애플리케이션을 가리키는 문자열로 해석됩니다. 이는 절대 URL이나 상대 경로일 수 있으며 필요한 경우 비동기로 실행할 수 있습니다.
+
+`preview` 함수에는 다음 인수가 제공됩니다:
+
+| 경로          | 설명                                                                          |
+| ------------- | ----------------------------------------------------------------------------- |
+| **`doc`**     | 편집 중인 문서의 데이터. 여기에는 아직 저장되지 않은 변경사항이 포함됩니다. |
+| **`options`** | 추가 속성을 가진 객체.                                                        |
+
+`options` 객체에는 다음 속성이 포함됩니다:
+
+| 경로         | 설명                                    |
+| ------------ | --------------------------------------- |
+| **`locale`** | 편집 중인 문서의 현재 로케일.           |
+| **`req`**    | Payload Request 객체.                   |
+| **`token`**  | 현재 인증된 사용자의 JWT 토큰.          |
+
+애플리케이션이 Vercel Preview Deployments에 배포하는 것과 같이 완전한 URL이 필요한 경우 `req` 속성을 사용하여 이 URL을 빌드할 수 있습니다:
+
+```ts
+preview: (doc, { req }) => `${req.protocol}//${req.host}/${doc.slug}` // highlight-line
+```
+
+## 초안 프리뷰
+
+프리뷰 기능은 "초안 프리뷰"를 달성하는 데 사용할 수 있습니다. 관리자 패널에서 프리뷰 버튼을 클릭한 후 프론트엔드 애플리케이션 내에서 "초안 모드"에 들어갈 수 있습니다. 이를 통해 페이지 쿼리를 조정하여 `draft: true` 매개변수를 포함할 수 있습니다. 이 매개변수가 요청에 있으면 Payload는 문서의 `_status` 필드를 기반으로 게시된 문서 대신 초안 문서를 반환합니다.
+
+초안 모드에 들어가려면 `preview` 함수에 제공된 URL이 초안 모드가 활성화되었음을 나타내는 쿠키나 세션 변수를 설정하는 프론트엔드 애플리케이션의 커스텀 엔드포인트를 가리킬 수 있습니다. 이는 프레임워크에 따라 다르므로 여기서 메커니즘은 프레임워크마다 다르지만 기본 개념은 동일합니다.
+
+### Next.js
+
+Next.js를 사용하는 경우 다음 코드를 사용하여 [초안 모드](https://nextjs.org/docs/app/building-your-application/configuring/draft-mode)에 들어갈 수 있습니다.
+
+#### 1단계: 프리뷰 URL 형식 지정
+
+먼저 `admin.preview` 함수를 프론트엔드에서 열 커스텀 엔드포인트를 가리키도록 형식화하세요. 이 URL에는 몇 가지 핵심 쿼리 검색 매개변수가 포함되어야 합니다:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const Pages: CollectionConfig = {
+  slug: 'pages',
+  admin: {
+    preview: ({ slug, collection }) => {
+      const encodedParams = new URLSearchParams({
+        slug,
+        collection,
+        path: `/${slug}`,
+        previewSecret: process.env.PREVIEW_SECRET || '',
+      })
+
+      return `/preview?${encodedParams.toString()}` // highlight-line
+    },
+  },
+  fields: [
+    {
+      name: 'slug',
+      type: 'text',
+    },
+  ],
+}
+```
+
+#### 2단계: 프리뷰 라우트 생성
+
+그런 다음 프리뷰 시크릿을 검증하고, 사용자를 인증하고, 초안 모드에 들어가는 API 라우트를 생성하세요:
+
+`/app/preview/route.ts`
+
+```ts
+import type { CollectionSlug, PayloadRequest } from 'payload'
+import { getPayload } from 'payload'
+
+import { draftMode } from 'next/headers'
+import { redirect } from 'next/navigation'
+
+import configPromise from '@payload-config'
+
+export async function GET(
+  req: {
+    cookies: {
+      get: (name: string) => {
+        value: string
+      }
+    }
+  } & Request,
+): Promise<Response> {
+  const payload = await getPayload({ config: configPromise })
+
+  const { searchParams } = new URL(req.url)
+
+  const path = searchParams.get('path')
+  const collection = searchParams.get('collection') as CollectionSlug
+  const slug = searchParams.get('slug')
+  const previewSecret = searchParams.get('previewSecret')
+
+  if (previewSecret !== process.env.PREVIEW_SECRET) {
+    return new Response('You are not allowed to preview this page', {
+      status: 403,
+    })
+  }
+
+  if (!path || !collection || !slug) {
+    return new Response('Insufficient search params', { status: 404 })
+  }
+
+  if (!path.startsWith('/')) {
+    return new Response(
+      'This endpoint can only be used for relative previews',
+      { status: 500 },
+    )
+  }
+
+  let user
+
+  try {
+    user = await payload.auth({
+      req: req as unknown as PayloadRequest,
+      headers: req.headers,
+    })
+  } catch (error) {
+    payload.logger.error(
+      { err: error },
+      'Error verifying token for live preview',
+    )
+    return new Response('You are not allowed to preview this page', {
+      status: 403,
+    })
+  }
+
+  const draft = await draftMode()
+
+  if (!user) {
+    draft.disable()
+    return new Response('You are not allowed to preview this page', {
+      status: 403,
+    })
+  }
+
+  // 사용자가 이 페이지를 미리볼 수 있는지 확인하는 추가 검사를 여기에 추가할 수 있습니다
+
+  draft.enable()
+
+  redirect(path)
+}
+```
+
+#### 3단계: 초안 콘텐츠 쿼리
+
+마지막으로 프론트엔드 애플리케이션에서 초안 모드를 감지하고 초안을 포함하도록 쿼리를 조정할 수 있습니다:
+
+`/app/[slug]/page.tsx`
+
+```ts
+export default async function Page({ params: paramsPromise }) {
+  const { slug = 'home' } = await paramsPromise
+
+  const { isEnabled: isDraftMode } = await draftMode()
+
+  const payload = await getPayload({ config })
+
+  const page = await payload.find({
+    collection: 'pages',
+    depth: 0,
+    draft: isDraftMode, // highlight-line
+    limit: 1,
+    overrideAccess: isDraftMode,
+    where: {
+      slug: {
+        equals: slug,
+      },
+    },
+  })?.then(({ docs }) => docs?.[0])
+
+  if (page === null) {
+    return notFound()
+  }
+
+  return (
+    <main>
+      <h1>{page?.title}</h1>
+    </main>
+  )
+}
+```
+
+<Banner type="success">
+  **참고:** 이에 대한 완전히 작동하는 예제는 [예제
+  디렉토리](https://github.com/payloadcms/payload/tree/main/examples)의 공식
+  [초안 프리뷰
+  예제](https://github.com/payloadcms/payload/tree/main/examples/draft-preview)를
+  확인하세요.
+</Banner>

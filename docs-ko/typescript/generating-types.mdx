@@ -1,0 +1,238 @@
+---
+title: TypeScript 인터페이스 생성
+label: 타입 생성
+order: 20
+desc: 컬렉션과 글로벌을 기반으로 고유한 TypeScript 인터페이스를 생성합니다.
+keywords: headless cms, typescript, documentation, Content Management System, cms, headless, javascript, node, react, nextjs
+---
+
+[플러그인](../plugins/overview), [훅](../hooks/overview), [액세스 제어](../access-control/overview) 함수, [커스텀 뷰](../custom-components/custom-views), [GraphQL 쿼리/뮤테이션](../graphql/overview), 또는 기타 항목과 같은 고유한 커스텀 기능을 Payload에 구축하는 동안, Payload 설정 자체에서 동적으로 고유한 TypeScript 타입을 생성하는 것이 유용할 수 있습니다.
+
+## 타입 생성 스크립트
+
+Payload 설정을 기반으로 타입을 생성하려면 Payload 프로젝트에서 다음 명령을 실행하세요:
+
+```
+payload generate:types
+```
+
+타입을 재생성해야 할 때마다 이 명령을 실행할 수 있으며, 그런 다음 이러한 타입을 Payload 코드에서 직접 사용할 수 있습니다.
+
+## declare 문 비활성화
+
+기본적으로 `generate:types`는 타입 파일에 `declare` 문을 추가하여 Payload 내에서 타입 추론을 자동으로 활성화합니다.
+
+하지만 다른 저장소에서 `payload-types.ts` 파일을 사용하는 경우, 이 `declare` 문을 비활성화하는 것이 좋을 수 있습니다. 그래야 Payload 타입을 사용하지만 Payload가 설치되지 않은 프로젝트에서 TS 오류가 발생하지 않습니다.
+
+```ts
+// payload.config.ts
+{
+  // ...
+  typescript: {
+    declare: false, // 설정되지 않으면 기본값은 true
+  },
+}
+```
+
+`declare` 패턴을 비활성화하는 경우, Payload 타입이 인식되도록 코드에 수동으로 `declare` 문을 추가해야 합니다. 다음은 `payload.config.ts` 파일에서 타입을 선언하는 방법을 보여주는 예제입니다:
+
+```ts
+import { Config } from './payload-types'
+
+declare module 'payload' {
+  export interface GeneratedTypes extends Config {}
+}
+```
+
+## 커스텀 출력 파일 경로
+
+Payload 설정에 속성을 추가하여 타입이 생성될 위치를 지정할 수 있습니다:
+
+```ts
+// payload.config.ts
+{
+  // ...
+	typescript: {
+    // 기본값: path.resolve(__dirname, './payload-types.ts')
+		outputFile: path.resolve(__dirname, './generated-types.ts'),
+	},
+}
+```
+
+위 예제는 타입을 `generated-types.ts` 파일로 Payload 설정 자체 옆에 배치합니다.
+
+## 커스텀 생성 타입
+
+Payload는 JSON 스키마를 기반으로 타입을 생성합니다. `typescript.schema`에 함수를 전달하여 해당 JSON 스키마와 생성된 타입을 확장할 수 있습니다:
+
+```ts
+// payload.config.ts
+{
+  // ...
+  typescript: {
+    schema: [
+      ({ jsonSchema }) => {
+        // 여기서 JSON 스키마를 수정
+        jsonSchema.definitions.Test = {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            content: { type: 'string' },
+          },
+          required: ['title', 'content'],
+        }
+        return jsonSchema
+      },
+    ]
+  }
+}
+
+// 이것은 payload-types.ts에서 다음 타입을 생성합니다:
+
+export interface Test {
+  title: string
+  content: string
+  [k: string]: unknown
+}
+```
+
+이 함수는 기존 JSON 스키마를 인수로 받아서 수정된 JSON 스키마를 반환합니다. 고유한 타입을 생성하려는 플러그인에 유용할 수 있습니다.
+
+## 사용 예제
+
+예를 들어, 다음과 같은 간단한 Payload 설정을 살펴보겠습니다:
+
+```ts
+import type { Config } from 'payload'
+
+const config: Config = {
+  serverURL: process.env.NEXT_PUBLIC_SERVER_URL,
+  admin: {
+    user: 'users',
+  },
+  collections: [
+    {
+      slug: 'users',
+      fields: [
+        {
+          name: 'name',
+          type: 'text',
+          required: true,
+        },
+      ],
+    },
+    {
+      slug: 'posts',
+      admin: {
+        useAsTitle: 'title',
+      },
+      fields: [
+        {
+          name: 'title',
+          type: 'text',
+        },
+        {
+          name: 'author',
+          type: 'relationship',
+          relationTo: 'users',
+        },
+      ],
+    },
+  ],
+}
+```
+
+타입을 생성하면 다음 두 TypeScript 인터페이스를 포함하는 파일이 생성됩니다:
+
+```ts
+export interface User {
+  id: string
+  name: string
+  email?: string
+  resetPasswordToken?: string
+  resetPasswordExpiration?: string
+  loginAttempts?: number
+  lockUntil?: string
+}
+
+export interface Post {
+  id: string
+  title?: string
+  author?: string | User
+}
+```
+
+## 커스텀 필드 인터페이스
+
+`array`, `block`, `group` 및 명명된 `tab` 필드의 경우 최상위 재사용 가능한 인터페이스를 생성할 수 있습니다. 다음 group 필드 설정:
+
+```ts
+{
+  type: 'group',
+  name: 'meta',
+  interfaceName: 'SharedMeta', <-- 여기!!
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+    },
+    {
+      name: 'description',
+      type: 'text',
+    },
+  ],
+}
+```
+
+다음이 생성됩니다:
+
+```ts
+// 최상위 재사용 가능한 인터페이스!!
+export interface SharedMeta {
+  title?: string
+  description?: string
+}
+
+// 컬렉션 인터페이스 내에서의 사용 예제
+export interface Collection1 {
+  // ...다른 필드들
+  meta?: SharedMeta
+}
+```
+
+<Banner type="warning">
+  **이름 충돌**
+
+이러한 타입들이 최상위로 끌어올려지므로 이름 충돌이 발생할 수 있다는 점을 알아야 합니다.
+예를 들어, `Meta`라는 이름의 컬렉션이 있고 `Meta`라는 이름의 인터페이스도 만든다면
+충돌이 발생합니다. 끝에 필드 타입을 추가하여 인터페이스의 범위를 지정하는 것이 좋습니다.
+예: `MetaGroup` 등.
+
+</Banner>
+
+## 타입 사용
+
+타입이 생성되었으므로 이제 Payload의 로컬 API가 타입화됩니다. 사용자가 프론트엔드 코드에서 이것을 사용하려고 하는 것이 일반적인데, Payload로 생성한 다음 파일을 프론트엔드 코드베이스로 복사하는 것을 권장합니다. 이것이 타입을 프론트엔드 코드베이스에 가져오는 가장 간단한 방법입니다.
+
+### npm 스크립트 추가
+
+<Banner type="warning">
+  **중요**
+
+Payload는 타입을 생성하기 위해 설정을 찾을 수 있어야 합니다.
+
+</Banner>
+
+Payload는 자동으로 설정을 찾으려고 시도하지만 항상 찾을 수 있는 것은 아닙니다. 예를 들어, `/src` 디렉토리 등에서 작업하는 경우 환경 변수를 사용하여 Payload에 설정을 찾을 위치를 수동으로 알려줘야 합니다. 이것이 해당하는 경우, 타입 생성을 더 쉽게 만들기 위해 npm 스크립트를 만들 수 있습니다.
+
+타입을 생성하고 Payload에 설정을 찾을 위치를 알려주는 npm 스크립트를 추가하려면 `package.json`을 열고 `scripts` 속성을 다음과 같이 업데이트하세요:
+
+```
+{
+  "scripts": {
+    "generate:types": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload generate:types",
+  },
+}
+```
+
+이제 `pnpm generate:types`를 실행하여 쉽게 타입을 생성할 수 있습니다.

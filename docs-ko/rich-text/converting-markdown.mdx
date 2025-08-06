@@ -1,0 +1,265 @@
+---
+title: Markdown 변환
+label: Markdown 변환
+order: 23
+desc: lexical richtext와 Markdown / MDX 간의 변환
+keywords: lexical, richtext, markdown, md, mdx
+---
+
+## Richtext를 Markdown으로 변환
+
+Payload 설정과 [lexical 에디터 설정](/docs/rich-text/converters#retrieving-the-editor-config)에 액세스할 수 있다면 다음과 같이 lexical 에디터 상태를 Markdown으로 변환할 수 있습니다:
+
+```ts
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+
+import {
+  convertLexicalToMarkdown,
+  editorConfigFactory,
+} from '@payloadcms/richtext-lexical'
+
+// 여기에 richtext 데이터
+const data: SerializedEditorState = {}
+
+const markdown = convertLexicalToMarkdown({
+  data,
+  editorConfig: await editorConfigFactory.default({
+    config, // <= Payload 설정에 액세스할 수 있는지 확인하세요
+  }),
+})
+```
+
+### 예제 - Collection에서 Markdown 출력
+
+```ts
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+import type { CollectionConfig, RichTextField } from 'payload'
+
+import {
+  convertLexicalToMarkdown,
+  editorConfigFactory,
+  lexicalEditor,
+} from '@payloadcms/richtext-lexical'
+
+const Pages: CollectionConfig = {
+  slug: 'pages',
+  fields: [
+    {
+      name: 'nameOfYourRichTextField',
+      type: 'richText',
+      editor: lexicalEditor(),
+    },
+    {
+      name: 'markdown',
+      type: 'textarea',
+      admin: {
+        hidden: true,
+      },
+      hooks: {
+        afterRead: [
+          ({ siblingData, siblingFields }) => {
+            const data: SerializedEditorState =
+              siblingData['nameOfYourRichTextField']
+
+            if (!data) {
+              return ''
+            }
+
+            const markdown = convertLexicalToMarkdown({
+              data,
+              editorConfig: editorConfigFactory.fromField({
+                field: siblingFields.find(
+                  (field) =>
+                    'name' in field && field.name === 'nameOfYourRichTextField',
+                ) as RichTextField,
+              }),
+            })
+
+            return markdown
+          },
+        ],
+        beforeChange: [
+          ({ siblingData }) => {
+            // markdown 필드가 데이터베이스에 저장되지 않도록 보장
+            delete siblingData['markdown']
+            return null
+          },
+        ],
+      },
+    },
+  ],
+}
+```
+
+## Markdown을 Richtext로 변환
+
+Payload 설정과 [lexical 에디터 설정](/docs/rich-text/converters#retrieving-the-editor-config)에 액세스할 수 있다면 다음과 같이 Markdown을 lexical 에디터 상태로 변환할 수 있습니다:
+
+```ts
+import {
+  convertMarkdownToLexical,
+  editorConfigFactory,
+} from '@payloadcms/richtext-lexical'
+
+const lexicalJSON = convertMarkdownToLexical({
+  editorConfig: await editorConfigFactory.default({
+    config, // <= Payload 설정에 액세스할 수 있는지 확인하세요
+  }),
+  markdown: '# Hello world\n\nThis is a **test**.',
+})
+```
+
+## MDX 변환
+
+Payload는 MDX 콘텐츠의 직렬화와 역직렬화를 지원합니다. Markdown 변환기는 기능에 저장되는 반면, MDX 변환기는 `BlocksFeature`에 전달하는 블록에 저장됩니다.
+
+### 커스텀 블록 정의
+
+다음은 `Banner` 블록의 예제입니다.
+
+이 블록은:
+
+- 관리 UI에서 특정 필드(예: type, content)를 가진 일반적인 Lexical 블록으로 렌더링됩니다.
+- MDX `Banner` 컴포넌트로 변환됩니다.
+- 해당 MDX `Banner`를 다시 Lexical 상태로 파싱할 수 있습니다.
+
+<LightDarkImage
+  srcLight="https://payloadcms.com/images/docs/mdx-example-light.png"
+  srcDark="https://payloadcms.com/images/docs/mdx-example-dark.png"
+  alt="lexical 에디터의 Banner 필드와 MDX 출력을 보여줍니다"
+  caption="lexical 에디터의 Banner 필드와 MDX 출력"
+/>
+
+```ts
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+import type { Block, CollectionConfig, RichTextField } from 'payload'
+
+import {
+  BlocksFeature,
+  convertLexicalToMarkdown,
+  editorConfigFactory,
+  lexicalEditor,
+} from '@payloadcms/richtext-lexical'
+
+const BannerBlock: Block = {
+  slug: 'Banner',
+  fields: [
+    {
+      name: 'type',
+      type: 'select',
+      defaultValue: 'info',
+      options: [
+        { label: 'Info', value: 'info' },
+        { label: 'Warning', value: 'warning' },
+        { label: 'Error', value: 'error' },
+      ],
+    },
+    {
+      name: 'content',
+      type: 'richText',
+      editor: lexicalEditor(),
+    },
+  ],
+  jsx: {
+    /**
+     * Lexical에서 MDX로 변환:
+     * <Banner type="..." >child content</Banner>
+     */
+    export: ({ fields, lexicalToMarkdown }) => {
+      const props: any = {}
+      if (fields.type) {
+        props.type = fields.type
+      }
+
+      return {
+        children: lexicalToMarkdown({ editorState: fields.content }),
+        props,
+      }
+    },
+    /**
+     * MDX에서 Lexical로 변환:
+     */
+    import: ({ children, markdownToLexical, props }) => {
+      return {
+        type: props?.type,
+        content: markdownToLexical({ markdown: children }),
+      }
+    },
+  },
+}
+
+const Pages: CollectionConfig = {
+  slug: 'pages',
+  fields: [
+    {
+      name: 'nameOfYourRichTextField',
+      type: 'richText',
+      editor: lexicalEditor({
+        features: ({ defaultFeatures }) => [
+          ...defaultFeatures,
+          BlocksFeature({
+            blocks: [BannerBlock],
+          }),
+        ],
+      }),
+    },
+    {
+      name: 'markdown',
+      type: 'textarea',
+      hooks: {
+        afterRead: [
+          ({ siblingData, siblingFields }) => {
+            const data: SerializedEditorState =
+              siblingData['nameOfYourRichTextField']
+
+            if (!data) {
+              return ''
+            }
+
+            const markdown = convertLexicalToMarkdown({
+              data,
+              editorConfig: editorConfigFactory.fromField({
+                field: siblingFields.find(
+                  (field) =>
+                    'name' in field && field.name === 'nameOfYourRichTextField',
+                ) as RichTextField,
+              }),
+            })
+
+            return markdown
+          },
+        ],
+        beforeChange: [
+          ({ siblingData }) => {
+            // markdown 필드가 데이터베이스에 저장되지 않도록 보장
+            delete siblingData['markdown']
+            return null
+          },
+        ],
+      },
+    },
+  ],
+}
+```
+
+변환은 블록의 `jsx` 속성을 사용하여 수행됩니다. `export` 함수는 lexical에서 MDX로 변환할 때 호출되고, `import` 함수는 MDX에서 lexical로 변환할 때 호출됩니다.
+
+### Export
+
+`export` 함수는 블록 필드 데이터와 `lexicalToMarkdown` 함수를 인수로 받습니다. 다음 객체를 반환합니다:
+
+| 속성       | 타입   | 설명                                      |
+| ---------- | ------ | ---------------------------------------- |
+| `children` | string | 블록의 여는 태그와 닫는 태그 사이에 위치합니다. |
+| `props`    | object | 블록의 여는 태그에 위치합니다.              |
+
+### Import
+
+`import` 함수는 MDX에서 추출된 데이터를 제공합니다. 다음 인수를 받습니다:
+
+| 인수       | 타입   | 설명                                                          |
+| ---------- | ------ | ------------------------------------------------------------ |
+| `children` | string | 블록의 여는 태그와 닫는 태그 사이의 텍스트입니다.                |
+| `props`    | object | 블록에 전달된 props로, 여는 태그에서 객체로 파싱됩니다.        |
+
+반환되는 객체는 블록 필드 데이터와 같습니다.

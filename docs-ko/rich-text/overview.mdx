@@ -1,0 +1,318 @@
+---
+description: Lexical 기반의 Payload 에디터는 탁월한 편의성으로 뛰어난 커스터마이징을 가능하게 합니다.
+keywords: lexical, rich text, editor, headless cms
+label: Overview
+order: 10
+title: Rich Text Editor
+---
+
+<Banner type="success">
+
+이 문서는 Lexical(Meta의 리치 텍스트 에디터) 기반의 새로운 에디터에 관한 것입니다. 이전 기본 
+에디터는 Slate 기반이었으며 여전히 지원됩니다. [해당 문서](/docs/rich-text/slate)를 읽거나, 
+Slate에서 Lexical로 마이그레이션하는 선택적 [마이그레이션 가이드](/docs/rich-text/migration)를 참고할 수 있습니다(권장).
+
+</Banner>
+
+에디터는 [rich text 필드](/docs/fields/rich-text)의 가장 중요한 속성입니다.
+
+Payload의 핵심 부분으로서, 우리는 여러분이 상상할 수 있는 최고의 편집 경험을 제공한다고 자부합니다. 기본적으로 건전한 기본값을 제공하면서도, "/" 메뉴와 툴바(인라인 또는 고정)부터 상상할 수 있는 모든 컴포넌트나 서브필드 삽입까지 모든 세부사항을 커스터마이징할 수 있는 유연성을 제공합니다.
+
+리치 텍스트 에디터를 사용하려면 먼저 설치해야 합니다:
+
+```bash
+pnpm install @payloadcms/richtext-lexical
+```
+
+설치가 완료되면, 다음과 같이 최상위 Payload 설정에 전달할 수 있습니다:
+
+```ts
+import { buildConfig } from 'payload'
+import { lexicalEditor } from '@payloadcms/richtext-lexical'
+
+export default buildConfig({
+  collections: [
+    // 여기에 컬렉션을 작성합니다
+  ],
+  // Lexical 에디터를 루트 설정에 전달합니다
+  editor: lexicalEditor({}),
+})
+```
+
+다음과 같이 필드별로 Lexical 설정을 재정의할 수도 있습니다:
+
+```ts
+import type { CollectionConfig } from 'payload'
+import { lexicalEditor } from '@payloadcms/richtext-lexical'
+
+export const Pages: CollectionConfig = {
+  slug: 'pages',
+  fields: [
+    {
+      name: 'content',
+      type: 'richText',
+      // 여기에 Lexical 에디터를 전달하고 필요에 따라 기본 설정을 재정의합니다
+      editor: lexicalEditor({}),
+    },
+  ],
+}
+```
+
+## Features를 통한 lexical 에디터 확장
+
+Lexical은 확장성을 염두에 두고 설계되었습니다. 새로운 기능을 도입하거나 기존 기능을 조정하고자 하는 경우, Lexical을 사용하면 그런 변경사항을 쉽게 구현할 수 있습니다.
+
+### Features: 빌딩 블록
+
+Lexical의 커스터마이징 잠재력의 핵심은 "features"입니다. Lexical은 대부분의 사용 사례에 필수적이라고 생각하는 기본 features 세트와 함께 제공되지만, 진정한 힘은 이를 재정의, 확장 또는 제거할 수 있는 능력에 있습니다.
+
+모든 기본 features를 제거하면 빈 에디터가 남습니다. 그런 다음 필요한 features만 추가하거나 처음부터 사용자 정의 features를 구축할 수 있습니다.
+
+### 새로운 Features 통합
+
+사용자 정의 features를 추가하려면 Lexical Editor를 초기화할 때 `features` prop을 사용하세요. 다음은 이를 수행하는 기본 예시입니다:
+
+```ts
+import {
+  BlocksFeature,
+  LinkFeature,
+  UploadFeature,
+  lexicalEditor,
+} from '@payloadcms/richtext-lexical'
+import { Banner } from '../blocks/Banner'
+import { CallToAction } from '../blocks/CallToAction'
+
+{
+  editor: lexicalEditor({
+    features: ({ defaultFeatures, rootFeatures }) => [
+      ...defaultFeatures,
+      LinkFeature({
+        // Link feature의 내장 필드를 
+        // 커스터마이징하는 방법을 보여주는 예시
+        fields: ({ defaultFields }) => [
+          ...defaultFields,
+          {
+            name: 'rel',
+            label: 'Rel Attribute',
+            type: 'select',
+            hasMany: true,
+            options: ['noopener', 'noreferrer', 'nofollow'],
+            admin: {
+              description:
+                'rel 속성은 링크된 리소스와 현재 문서 간의 관계를 정의합니다. 이것은 사용자 정의 링크 필드입니다.',
+            },
+          },
+        ],
+      }),
+      UploadFeature({
+        collections: {
+          uploads: {
+            // Upload feature의 내장 필드를
+            // 커스터마이징하는 방법을 보여주는 예시
+            fields: [
+              {
+                name: 'caption',
+                type: 'richText',
+                editor: lexicalEditor(),
+              },
+            ],
+          },
+        },
+      }),
+      // 이것은 믿을 수 없을 정도로 강력합니다. 다음과 같이 Payload 블록을
+      // Lexical 에디터에서 직접 재사용할 수 있습니다:
+      BlocksFeature({
+        blocks: [Banner, CallToAction],
+      }),
+    ],
+  })
+}
+```
+
+`features`는 features 배열이거나 features 배열을 반환하는 함수일 수 있습니다. 함수는 다음 props를 제공합니다:
+
+| Prop                  | 설명                                                                                                                                                                                                                                            |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`defaultFeatures`** | 이 의견이 반영된 배열은 모든 "권장" 기본 features를 포함합니다. 아래 표에서 기본 features에 포함된 features를 확인할 수 있습니다.                                                                                                |
+| **`rootFeatures`**    | 이 배열은 루트 richText 에디터(payload.config.ts에서 정의된)에서 활성화된 모든 features를 포함합니다. 이 필드가 루트 richText 에디터이거나 루트 richText 에디터가 lexical 에디터가 아닌 경우, 이 배열은 비어 있습니다. |
+
+## 공식 Features
+
+공식 features에 대한 자세한 정보는 [공식 features 문서](../rich-text/official-features)에서 확인할 수 있습니다.
+
+## 자신만의 사용자 정의 Feature 생성
+
+사용자 정의 feature 생성에 대한 자세한 정보는 [사용자 정의 feature 구축 문서](../rich-text/custom-features)에서 확인할 수 있습니다.
+
+## TypeScript
+
+저장된 데이터의 모든 단일 부분은 lexical 내에서 100% 완전히 타입화됩니다. 모든 단일 노드에 대한 타입을 제공하며, `@payloadcms/richtext-lexical`에서 가져올 수 있습니다 - 각 타입은 `Serialized` 접두사가 붙습니다(예: `SerializedUploadNode`).
+
+전체 에디터 JSON을 완전히 타입화하려면 모든 가능한 노드 타입의 유니온을 제네릭으로 받는 `TypedEditorState` 헬퍼 타입을 사용할 수 있습니다. 모든 가능한 노드 타입을 이미 포함하는 타입은 제공하지 않습니다. 왜냐하면 그것들은 에디터에서 활성화한 features에 따라 달라지기 때문입니다. 다음은 예시입니다:```ts
+import type {
+  SerializedAutoLinkNode,
+  SerializedBlockNode,
+  SerializedHorizontalRuleNode,
+  SerializedLinkNode,
+  SerializedListItemNode,
+  SerializedListNode,
+  SerializedParagraphNode,
+  SerializedQuoteNode,
+  SerializedRelationshipNode,
+  SerializedTextNode,
+  SerializedUploadNode,
+  TypedEditorState,
+  SerializedHeadingNode,
+} from '@payloadcms/richtext-lexical'
+
+const editorState: TypedEditorState<
+  | SerializedAutoLinkNode
+  | SerializedBlockNode
+  | SerializedHorizontalRuleNode
+  | SerializedLinkNode
+  | SerializedListItemNode
+  | SerializedListNode
+  | SerializedParagraphNode
+  | SerializedQuoteNode
+  | SerializedRelationshipNode
+  | SerializedTextNode
+  | SerializedUploadNode
+  | SerializedHeadingNode
+> = {
+  root: {
+    type: 'root',
+    direction: 'ltr',
+    format: '',
+    indent: 0,
+    version: 1,
+    children: [
+      {
+        children: [
+          {
+            detail: 0,
+            format: 0,
+            mode: 'normal',
+            style: '',
+            text: '일부 텍스트. 여기의 모든 속성은 완전히 타입화됩니다',
+            type: 'text',
+            version: 1,
+          },
+        ],
+        direction: 'ltr',
+        format: '',
+        indent: 0,
+        type: 'paragraph',
+        textFormat: 0,
+        version: 1,
+      },
+    ],
+  },
+}
+```
+
+또는 `defaultFeatures`에 포함된 모든 노드의 모든 타입을 포함하는 `DefaultTypedEditorState` 타입을 사용할 수 있습니다:
+
+```ts
+import type { DefaultTypedEditorState } from '@payloadcms/richtext-lexical'
+
+const editorState: DefaultTypedEditorState = {
+  root: {
+    type: 'root',
+    direction: 'ltr',
+    format: '',
+    indent: 0,
+    version: 1,
+    children: [
+      {
+        children: [
+          {
+            detail: 0,
+            format: 0,
+            mode: 'normal',
+            style: '',
+            text: '일부 텍스트. 여기의 모든 속성은 완전히 타입화됩니다',
+            type: 'text',
+            version: 1,
+          },
+        ],
+        direction: 'ltr',
+        format: '',
+        indent: 0,
+        type: 'paragraph',
+        textFormat: 0,
+        version: 1,
+      },
+    ],
+  },
+}
+```
+
+`TypedEditorState`와 마찬가지로, `DefaultTypedEditorState`도 선택적으로 노드 타입 유니온을 제네릭으로 받습니다. 여기서는 지정된 노드 타입을 기본 타입에 **추가**합니다. 예시:
+
+```ts
+DefaultTypedEditorState<SerializedBlockNode | YourCustomSerializedNode>
+```
+
+이것은 에디터 상태의 타입 안전한 표현입니다. 노드의 `type` 속성의 자동 제안을 보면 사용할 수 있는 모든 가능한 노드 타입을 볼 수 있습니다.
+
+lexical 코어 패키지가 아닌 `@payloadcms/richtext-lexical`에서 내보낸 타입만 사용해야 합니다. 우리가 내보내는 타입에 대해서만 제어권을 가지고 있으며 lexical 코어가 동일한 이름으로 타입을 내보낼 수 있지만 정확성을 보장할 수 있습니다.
+
+### 자동 타입 생성
+
+Lexical은 아직 richText 필드에 대한 정확한 타입 정의를 자동으로 생성하지 않습니다 - 이는 향후 개선될 예정입니다. 현재로서는 타입 어설션을 사용하여 향상시킬 수 있는 에디터 JSON의 대략적인 형태만 출력합니다.
+
+## Admin 커스터마이징
+
+Rich Text Field 에디터 구성에는 다음 옵션을 가진 `admin` 속성이 있습니다:
+
+| 속성                           | 설명                                                                              |
+| ------------------------------ | ---------------------------------------------------------------------------------------- |
+| **`placeholder`**              | 필드에 대한 플레이스홀더 문자열을 정의하려면 이 속성을 설정하세요.                          |
+| **`hideGutter`**               | Admin Panel 내에서 이 필드의 거터를 숨기려면 이 속성을 `true`로 설정하세요.          |
+| **`hideInsertParagraphAtEnd`** | 에디터 끝에 나타나는 "+" 버튼을 숨기려면 이 속성을 `true`로 설정하세요 |
+
+### 거터 비활성화
+
+`hideGutter` prop을 `true`로 설정하여 거터(에디터와 화면 왼쪽 가장자리 사이의 수직선 패딩)를 비활성화할 수 있습니다:
+
+```ts
+{
+  name: 'richText',
+  type: 'richText',
+  editor: lexicalEditor({
+    admin: {
+      hideGutter: true
+    },
+  }),
+}
+```
+
+### 플레이스홀더 커스터마이징
+
+`placeholder` prop을 설정하여 플레이스홀더(에디터가 비어있을 때 나타나는 텍스트)를 커스터마이징할 수 있습니다:
+
+```ts
+{
+  name: 'richText',
+  type: 'richText',
+  editor: lexicalEditor({
+    admin: {
+      placeholder: '여기에 콘텐츠를 입력하세요...'
+    },
+  }),
+}
+```
+
+## 빈 에디터 상태 감지
+
+리치 텍스트 필드에 처음 입력한 후 관리자 패널을 통해 모든 것을 삭제하면, 그 값은 `null`에서 빈 단락을 포함하는 JSON 객체로 변경됩니다.
+
+필요한 경우, 에디터가 비어있는지 감지하기 위해 사용자 정의 훅을 사용하는 등의 방법으로 프로그래밍적으로 필드 값을 `null`로 재설정할 수 있습니다.
+
+이는 데이터베이스에 `null` 또는 빈 값으로 저장될 수 있는 `text` 및 `textArea`와 같은 필드에도 적용됩니다. richText의 빈 값은 JSON 객체이므로 비어있는지 확인하는 것이 좀 더 복잡합니다 - 따라서 Payload는 이를 위한 유틸리티를 제공합니다:
+
+```ts
+import { hasText } from '@payloadcms/richtext-lexical/shared'
+
+hasText(richtextData)
+```

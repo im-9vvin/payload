@@ -1,0 +1,167 @@
+---
+title: Sentry 플러그인
+label: Sentry
+order: 90
+desc: Payload 애플리케이션에 Sentry 오류 추적을 통합하세요
+keywords: 플러그인, sentry, 오류, 추적, 모니터링, 로깅, 버그, 리포팅, 성능
+---
+
+![https://www.npmjs.com/package/@payloadcms/plugin-sentry](https://img.shields.io/npm/v/@payloadcms/plugin-sentry)
+
+이 플러그인을 사용하면 [Sentry](https://sentry.io/)를 [Payload](https://github.com/payloadcms/payload) 애플리케이션과 원활하게 통합할 수 있습니다.
+
+## Sentry란?
+
+Sentry는 개발자가 애플리케이션의 문제를 식별, 진단 및 해결하는 데 도움이 되는 강력한 오류 추적 및 성능 모니터링 도구입니다.
+
+<Banner type="success">
+  Sentry는 오류 데이터를 스마트하게 처리하여 버그를 더 쉽게 찾고 수정할 수 있게 해줍니다. -
+  [sentry.io](https://sentry.io/)
+</Banner>
+
+이 다면적 소프트웨어는 오류를 더 쉽게 관리하고 궁극적으로 애플리케이션이 원활하게 실행되도록 보장하는 다양한 기능을 제공합니다:
+
+## 핵심 기능
+
+- **오류 추적**: 애플리케이션에서 발생하는 오류를 즉시 캡처하고 기록
+- **성능 모니터링**: 애플리케이션 성능을 추적하여 속도 저하 및 병목 현상을 식별
+- **상세한 보고서**: 스택 추적 및 컨텍스트를 포함한 오류에 대한 포괄적인 인사이트 제공
+- **알림 및 알림**: 이벤트 기반 알림 전송 및 커스터마이징
+- **이슈 그룹화, 필터링 및 검색**: 유사한 오류를 자동으로 그룹화하고 커스텀 기준으로 이슈 필터링 및 검색 허용
+- **브레드크럼**: 오류에 이르는 사용자 작업 및 이벤트 기록
+- **통합**: 향상된 워크플로우 및 이슈 관리를 위해 다양한 도구 및 서비스와 연결
+
+<Banner type="info">
+  이 플러그인은 완전히 오픈소스이며 [소스 코드는
+  여기에서](https://github.com/payloadcms/payload/tree/main/packages/plugin-sentry)
+  찾을 수 있습니다. 도움이 필요하시면 [커뮤니티
+  도움말](https://payloadcms.com/community-help)을 확인하세요. 버그를 발견했다고 생각되면
+  가능한 한 자세한 내용과 함께 [새 이슈를
+  열어주세요](https://github.com/payloadcms/payload/issues/new?assignees=&labels=plugin%3A%20seo&template=bug_report.md&title=plugin-sentry%3A).
+</Banner>
+
+## 설치
+
+[pnpm](https://pnpm.io), [npm](https://npmjs.com), [Yarn](https://yarnpkg.com)과 같은 JavaScript 패키지 관리자를 사용하여 플러그인을 설치하세요:
+
+```bash
+  pnpm add @payloadcms/plugin-sentry
+```
+
+## Next.js용 Sentry 설정
+
+이 플러그인을 사용하기 전에 [Sentry + Next.js 설정](https://docs.sentry.io/platforms/javascript/guides/nextjs/)을 완료해야 합니다.
+
+설치 마법사로 [자동 설정](https://docs.sentry.io/platforms/javascript/guides/nextjs/#install)을 사용할 수 있습니다:
+
+```sh
+npx @sentry/wizard@latest -i nextjs
+```
+
+또는 [수동 설정](https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/)을 사용할 수도 있습니다
+
+## 기본 사용법
+
+[Payload Config](https://payloadcms.com/docs/configuration/overview)의 `plugins` 배열에서 플러그인을 호출하고 Sentry DSN을 옵션으로 전달하세요.
+
+```ts
+import { buildConfig } from 'payload'
+import { sentryPlugin } from '@payloadcms/plugin-sentry'
+import { Pages, Media } from './collections'
+
+import * as Sentry from '@sentry/nextjs'
+
+const config = buildConfig({
+  collections: [Pages, Media],
+  plugins: [sentryPlugin({ Sentry })],
+})
+
+export default config
+```
+
+## 데이터베이스 쿼리 계측
+
+Sentry가 Postgres 쿼리 성능 추적을 캡처하도록 하려면 Sentry로 패치된 `pg` 드라이버를 Postgres 어댑터에 주입해야 합니다. 이렇게 하면 Sentry의 계측이 데이터베이스 호출에 연결됩니다.
+
+```ts
+import * as Sentry from '@sentry/nextjs'
+import { buildConfig } from 'payload'
+import { sentryPlugin } from '@payloadcms/plugin-sentry'
+import { postgresAdapter } from '@payloadcms/db-postgres'
+import pg from 'pg'
+
+export default buildConfig({
+  db: postgresAdapter({
+    pool: { connectionString: process.env.DATABASE_URL },
+    pg, // Sentry 계측을 위해 패치된 pg 드라이버 주입
+  }),
+  plugins: [sentryPlugin({ Sentry })],
+})
+```
+
+## 옵션
+
+- `Sentry` : Sentry | **필수**
+
+  `Sentry` 인스턴스
+
+<Banner type="warning">
+  먼저 [Next.js용 Sentry 설정](#sentry-for-nextjs-setup)을
+  완료했는지 확인하세요.
+</Banner>
+
+- `enabled`: boolean | 선택사항
+
+  플러그인을 비활성화하려면 false로 설정하세요. 기본값은 `true`입니다.
+
+- `context`: `(args: ContextArgs) => Partial<ScopeContext> | Promise<Partial<ScopeContext>>`
+
+  Sentry에 추가 [컨텍스트 데이터](https://docs.sentry.io/platforms/javascript/enriching-events/context/#passing-context-directly)를 전달합니다
+
+- `captureErrors`: number[] | 선택사항
+
+  기본적으로 `Sentry.errorHandler`는 상태 코드가 500 이상인 오류만 캡처합니다. 추가 오류 코드를 캡처하려면 값을 배열에 숫자로 전달하세요.
+
+### 예제
+
+플러그인에 전달하여 이러한 옵션 중 아무것이나 구성하세요:
+
+```ts
+import { buildConfig } from 'payload'
+import { sentryPlugin } from '@payloadcms/plugin-sentry'
+
+import * as Sentry from '@sentry/nextjs'
+
+import { Pages, Media } from './collections'
+
+const config = buildConfig({
+  collections: [Pages, Media],
+  plugins: [
+    sentryPlugin({
+      options: {
+        captureErrors: [400, 403],
+        context: ({ defaultContext, req }) => {
+          return {
+            ...defaultContext,
+            tags: {
+              locale: req.locale,
+            },
+          }
+        },
+        debug: true,
+      },
+      Sentry,
+    }),
+  ],
+})
+
+export default config
+```
+
+## TypeScript
+
+모든 타입은 직접 가져올 수 있습니다:
+
+```ts
+import { PluginOptions } from '@payloadcms/plugin-sentry'
+```

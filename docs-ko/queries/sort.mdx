@@ -1,0 +1,82 @@
+---
+title: 정렬
+label: 정렬
+order: 20
+desc: Payload 정렬을 사용하면 필드별로 문서를 오름차순 또는 내림차순으로 정렬할 수 있습니다.
+keywords: query, documents, pagination, documentation, Content Management System, cms, headless, javascript, node, react, nextjs
+---
+
+Payload의 문서는 특정 [필드](../fields/overview)로 쉽게 정렬할 수 있습니다. 문서를 쿼리할 때 최상위 필드의 이름을 전달하면, 응답이 해당 필드로 문서를 _오름차순_으로 정렬합니다.
+
+마이너스 기호("-")가 접두사로 붙으면 _내림차순_으로 정렬됩니다. 로컬 API에서는 문자열 배열을 사용하여 여러 필드를 지정할 수 있습니다. REST API에서는 필드를 쉼표로 구분하여 여러 필드를 지정할 수 있습니다. 마이너스 기호는 개별 필드 앞에 올 수 있습니다.
+
+정렬은 데이터베이스에서 처리되기 때문에, 필드는 [관계 필드와 연결](/docs/fields/relationship#linking-virtual-fields-with-relationships)되지 않는 한 [가상 필드](https://payloadcms.com/blog/learn-how-virtual-fields-can-help-solve-common-cms-challenges)가 될 수 없습니다. 검색 가능하려면 데이터베이스에 저장되어야 합니다.
+
+<Banner type="success">
+  **팁:** 성능상의 이유로, 정렬될 필드에 대해 `index: true`를 활성화하는 것이 
+  권장됩니다. [자세한 내용](../database/indexes).
+</Banner>
+
+## 로컬 API
+
+[로컬 API](../local-api/overview)에서 문서를 정렬하려면 쿼리에서 `sort` 옵션을 사용할 수 있습니다:
+
+```ts
+import type { Payload } from 'payload'
+
+const getPosts = async (payload: Payload) => {
+  const posts = await payload.find({
+    collection: 'posts',
+    sort: '-createdAt', // highlight-line
+  })
+
+  return posts
+}
+```
+
+여러 필드로 정렬하려면 배열의 필드와 함께 `sort` 옵션을 사용할 수 있습니다:
+
+```ts
+import type { Payload } from 'payload'
+
+const getPosts = async (payload: Payload) => {
+  const posts = await payload.find({
+    collection: 'posts',
+    sort: ['priority', '-createdAt'], // highlight-line
+  })
+
+  return posts
+}
+```
+
+## REST API
+
+[REST API](../rest-api/overview)에서 정렬하려면 쿼리에서 `sort` 매개변수를 사용할 수 있습니다:
+
+```ts
+fetch('https://localhost:3000/api/posts?sort=-createdAt') // highlight-line
+  .then((response) => response.json())
+  .then((data) => console.log(data))
+```
+
+여러 필드로 정렬하려면 쉼표로 구분된 필드와 함께 `sort` 매개변수를 사용할 수 있습니다:
+
+```ts
+fetch('https://localhost:3000/api/posts?sort=priority,-createdAt') // highlight-line
+  .then((response) => response.json())
+  .then((data) => console.log(data))
+```
+
+## GraphQL API
+
+[GraphQL API](../graphql/overview)에서 정렬하려면 쿼리에서 `sort` 매개변수를 사용할 수 있습니다:
+
+```ts
+query {
+  Posts(sort: "-createdAt") {
+    docs {
+      color
+    }
+  }
+}
+```

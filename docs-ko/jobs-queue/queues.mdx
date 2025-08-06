@@ -1,0 +1,264 @@
+---
+title: Queues
+label: Queues
+order: 50
+desc: Queue는 추가된 순서대로 실행할 수 있는 특정 job 그룹입니다.
+keywords: jobs queue, application framework, typescript, node, react, nextjs
+---
+
+Queues는 Payload의 Jobs Queue의 마지막 측면이며 _작업을 실행하는 방법_을 다룹니다. 지금까지 실행할 작업을 대기열에 추가하는 방법만 다루었지만, 아직 실제로는 어떤 작업도 실행하지 않습니다.
+
+<Banner type="default">
+  **Queue**는 추가된 순서대로 실행되어야 하는 jobs의 그룹입니다.
+</Banner>
+
+작업을 실행할 때, Payload는 대기열에 추가된 모든 작업을 쿼리한 다음 실행합니다. 기본적으로 대기열에 추가된 모든 작업은 `default` 대기열에 추가됩니다.
+
+**하지만 야간에 실행되는 일부 작업과 5분마다 실행되어야 하는 다른 작업을 원한다고 상상해보세요.**
+
+`payload.jobs.queue()`를 사용하여 새 작업을 대기열에 추가할 때 `queue` 이름을 지정하면, 특정 작업을 `queue: 'nightly'`로 대기열에 추가하고, 다른 작업은 기본 대기열로 남겨둘 수 있습니다.
+
+그러면 두 가지 다른 실행자 전략을 구성할 수 있습니다:
+
+1. 매일 밤 실행되어 `nightly` 대기열에 추가된 작업을 쿼리하는 `cron`
+2. `default` 대기열에 추가된 작업을 약 5분마다 실행하는 다른 하나
+
+## 작업 실행
+
+위에서 언급했듯이, 작업을 대기열에 추가할 수 있지만 워커가 작업을 선택하고 실행하지 않으면 작업이 실행되지 않습니다. 이는 네 가지 방법으로 수행할 수 있습니다:
+
+### Cron jobs
+
+`jobs.autoRun` 속성을 사용하면 지정된 간격으로 대기열에 있는 작업을 자동으로 실행하는 cron 작업을 구성할 수 있습니다. 이는 새 작업을 _대기열에 추가하지_ 않고 지정된 대기열에 이미 있는 작업만 _실행_한다는 점에 유의하세요.
+
+**예시**:```ts
+export default buildConfig({
+  // Other configurations...
+  jobs: {
+    tasks: [
+      // your tasks here
+    ],
+    // autoRun은 선택적으로 `payload`를 인수로 받는 함수가 될 수 있습니다
+    autoRun: [
+      {
+        cron: '0 * * * *', // 매시 0분에
+        limit: 100, // 각 실행에서 처리할 작업 제한
+        queue: 'hourly', // 대기열의 이름
+      },
+      // 원하는 만큼 cron 작업 추가
+    ],
+    shouldAutoRun: async (payload) => {
+      // Payload에 작업을 실행해야 하는지 알려줍니다. 이 함수는 선택 사항이며 기본적으로 true를 반환합니다.
+      // 이 함수는 Payload가 작업을 선택하고 실행할 때마다 호출됩니다.
+      // 이 함수가 false를 반환하면 cron 스케줄이 중지됩니다.
+      return true
+    },
+  },
+})
+```
+
+<Banner type="warning">
+  autoRun은 항상 실행되는 전용 서버에서 사용하기 위한 것이며,
+  Vercel과 같은 서버리스 플랫폼에서는 사용하면 안 됩니다.
+</Banner>
+
+### Endpoint
+
+`/api/payload-jobs/run` 엔드포인트에 fetch 요청을 보내 작업을 실행할 수 있습니다:
+
+```ts
+// 여기서는 이 호출에 대해 100개의 작업만 실행하고
+// `nightly` 대기열에서 작업을 가져오려고 합니다:
+await fetch('/api/payload-jobs/run?limit=100&queue=nightly', {
+  method: 'GET',
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+})
+```
+
+이 엔드포인트는 자동으로 마운트되며, 작업을 실행하는 서버리스 함수를 호출하기 위해 Vercel Cron을 사용할 수 있는 Vercel과 같은 서버리스 플랫폼과 함께 유용합니다.
+
+**쿼리 매개변수:**
+
+- `limit`: 이 호출에서 실행할 최대 작업 수 (기본값: 10).
+- `queue`: 작업을 실행할 대기열의 이름. 지정하지 않으면 `default` 대기열에서 작업이 실행됩니다.
+- `allQueues`: `true`로 설정하면 모든 대기열의 모든 작업이 실행됩니다. 이는 `queue` 매개변수를 무시합니다.
+**Vercel Cron 예제**
+
+Vercel에서 배포하는 경우, 프로젝트 루트에 `vercel.json` 파일을 추가하여 Vercel Cron이 cron 스케줄에 따라 `run` 엔드포인트를 호출하도록 구성할 수 있습니다.
+
+다음은 이 파일의 예시입니다:
+
+```json
+{
+  "crons": [
+    {
+      "path": "/api/payload-jobs/run",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
+```
+
+위 구성은 엔드포인트 `/api/payload-jobs/run`을 5분마다 호출하도록 예약합니다.
+
+마지막 단계는 적절한 사용자만 runner를 호출할 수 있도록 `run` 엔드포인트를 보안하는 것입니다.
+
+이를 위해 Vercel 프로젝트에 `CRON_SECRET`이라는 환경 변수를 설정할 수 있습니다. 이는 무작위 문자열이어야 하며, 이상적으로는 16자 이상이어야 합니다.
+
+그런 다음 Vercel만 runner를 호출할 수 있도록 jobs 실행을 위한 `access` 함수를 수정할 수 있습니다.
+
+```ts
+export default buildConfig({
+  // Other configurations...
+  jobs: {
+    access: {
+      run: ({ req }: { req: PayloadRequest }): boolean => {
+        // 로그인한 사용자가 이 엔드포인트를 실행할 수 있도록 허용 (기본값)
+        if (req.user) return true
+
+        // 로그인한 사용자가 없는 경우, 
+        // Vercel Cron 비밀이 Authorization 헤더로 
+        // 제공되는지 확인합니다:
+        const authHeader = req.headers.get('authorization')
+        return authHeader === `Bearer ${process.env.CRON_SECRET}`
+      },
+    },
+    // Other job configurations...
+  },
+})
+```
+
+이것이 작동하는 이유는 Vercel이 Vercel Cron에 의해 트리거될 때 `CRON_SECRET` 환경 변수를 `Authorization` 헤더로 엔드포인트에 자동으로 제공하여 jobs를 안전하게 실행할 수 있도록 하기 때문입니다.
+
+프로젝트가 Vercel에 배포된 후, Vercel Cron job은 지정된 스케줄에 따라 `/api/payload-jobs/run` 엔드포인트를 자동으로 트리거하여 백그라운드에서 대기 중인 jobs를 실행합니다.
+
+### Local API
+
+서버 측 코드에서 프로그래밍 방식으로 jobs를 처리하려면 Local API를 사용할 수 있습니다:
+
+**모든 jobs 실행:**
+
+```ts
+// `default` 큐에서 모든 jobs 실행 - 기본 제한은 10
+const results = await payload.jobs.run()
+
+// 큐 이름과 제한을 인수로 전달하여 사용자 정의할 수 있습니다:
+await payload.jobs.run({ queue: 'nightly', limit: 100 })
+
+// 모든 큐에서 모든 jobs 실행:
+await payload.jobs.run({ allQueues: true })
+
+// 실행해야 할 jobs를 필터링하기 위해 where 절을 제공할 수 있습니다:
+await payload.jobs.run({
+  where: { 'input.message': { equals: 'secret' } },
+})
+```
+
+**단일 job 실행:**
+
+```ts
+const results = await payload.jobs.runByID({
+  id: myJobID,
+})
+```
+
+### Bin 스크립트
+
+마지막으로, Payload에서 기본 제공하는 bin 스크립트를 통해 jobs를 처리할 수 있습니다. 기본적으로 이 스크립트는 `default` 큐에서 jobs를 실행하며, 호출당 10개의 jobs로 제한됩니다:
+
+```sh
+npx payload jobs:run
+```
+
+`--queue` 및 `--limit` 플래그를 전달하여 기본 큐와 제한을 재정의할 수 있습니다:
+
+```sh
+npx payload jobs:run --queue myQueue --limit 15
+```
+
+모든 큐에서 모든 jobs를 실행하려면 `--all-queues` 플래그를 전달할 수 있습니다:
+
+```sh
+npx payload jobs:run --all-queues
+```
+
+또한 bin 스크립트를 사용하면 `jobs:run` 명령에 `--cron` 플래그를 전달하여 예약된 cron 기반으로 jobs를 실행할 수 있습니다:
+
+```sh
+npx payload jobs:run --cron "*/5 * * * *"
+```
+
+## 처리 순서
+
+기본적으로 jobs는 선입 선출(FIFO) 방식으로 처리됩니다. 즉, 큐에 처음 추가된 job이 가장 먼저 처리됩니다. 그러나 jobs가 처리되는 순서를 구성할 수도 있습니다.
+
+### Jobs 구성
+
+`processingOrder` 속성을 전달하여 jobs 구성에서 jobs가 처리되는 순서를 구성할 수 있습니다. 이는 `payload.find()`와 같은 기능에 사용되는 Payload [sort](../queries/sort) 속성을 모방합니다.
+
+```ts
+export default buildConfig({
+  // Other configurations...
+  jobs: {
+    tasks: [
+      // your tasks here
+    ],
+    processingOrder: '-createdAt', // 생성 역순으로 jobs 처리 = LIFO
+  },
+})
+```
+
+큐별로 이를 설정할 수도 있습니다:
+
+```ts
+export default buildConfig({
+  // Other configurations...
+  jobs: {
+    tasks: [
+      // your tasks here
+    ],
+    processingOrder: {
+      default: 'createdAt', // FIFO
+      queues: {
+        nightly: '-createdAt', // LIFO
+        myQueue: '-createdAt', // LIFO
+      },
+    },
+  },
+})
+```
+
+처리 순서에 대해 더 많은 제어가 필요한 경우, 처리 순서를 반환하는 함수를 전달할 수 있습니다. 이 함수는 큐가 jobs 처리를 시작할 때마다 호출됩니다.
+
+```ts
+export default buildConfig({
+  // Other configurations...
+  jobs: {
+    tasks: [
+      // your tasks here
+    ],
+    processingOrder: ({ queue }) => {
+      if (queue === 'myQueue') {
+        return '-createdAt' // LIFO
+      }
+      return 'createdAt' // FIFO
+    },
+  },
+})
+```
+
+### Local API
+
+`payload.jobs.queue` 메서드에서 `processingOrder` 속성을 전달하여 jobs가 처리되는 순서를 구성할 수 있습니다.
+
+```ts
+const createdJob = await payload.jobs.queue({
+  workflow: 'createPostAndUpdate',
+  input: {
+    title: 'my title',
+  },
+  processingOrder: '-createdAt', // 생성 역순으로 jobs 처리 = LIFO
+})
+```

@@ -1,0 +1,316 @@
+---
+title: Payload 구성
+label: 개요
+order: 10
+desc: Payload 구성은 커스텀 React 컴포넌트 추가부터 컬렉션 수정, 현지화 제어 등 Payload가 하는 모든 것의 중심입니다.
+keywords: 개요, 구성, 설정, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+Payload는 _구성 기반_, 코드 우선 CMS이자 애플리케이션 프레임워크입니다. Payload 구성은 Payload가 하는 모든 것의 중심으로, 간단하고 직관적인 API를 통해 애플리케이션을 깊이 구성할 수 있습니다. Payload 구성은 완전한 타입이 지정된 JavaScript 객체로 무한히 확장할 수 있습니다.
+
+[데이터베이스](../database/overview) 선택부터 [관리자 패널](../admin/overview)의 모양까지 모든 것이 Payload 구성을 통해 완전히 제어됩니다. 여기서 [필드](../fields/overview)를 정의하고, [현지화](./localization)를 추가하고, [인증](../authentication/overview)을 활성화하고, [접근 제어](../access-control/overview)를 구성하는 등 많은 작업을 할 수 있습니다.
+
+Payload 구성은 일반적으로 프로젝트의 루트에 위치한 `payload.config.ts` 파일입니다:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // 구성이 여기에 들어갑니다
+})
+```
+
+Payload 구성은 강력하게 타입이 지정되어 있고 Payload의 TypeScript 코드베이스와 직접 연결됩니다. 이는 IDE(예: VSCode)가 구성을 작성하는 동안 타입 자동 완성과 같은 유용한 정보를 제공한다는 의미입니다.
+
+<Banner type="success">
+  **팁:** Payload 구성의 위치는 커스터마이징할 수 있습니다. [자세한
+  내용](#customizing-the-config-location).
+</Banner>
+
+## 구성 옵션
+
+Payload 구성을 작성하려면 먼저 사용할 [데이터베이스](../database/overview)를 결정한 다음, [컬렉션](./collections) 또는 [글로벌](./globals)을 사용하여 [필드](../fields/overview)를 통해 데이터의 스키마를 정의하세요.
+
+다음은 가장 간단한 Payload 구성 중 하나입니다:
+
+```ts
+import { buildConfig } from 'payload'
+import { mongooseAdapter } from '@payloadcms/db-mongodb'
+
+export default buildConfig({
+  secret: process.env.PAYLOAD_SECRET,
+  db: mongooseAdapter({
+    url: process.env.DATABASE_URI,
+  }),
+  collections: [
+    {
+      slug: 'pages',
+      fields: [
+        {
+          name: 'title',          type: 'text',
+        },
+      ],
+    },
+  ],
+})
+```
+
+<Banner type="success">
+  **참고:** 더 복잡한 예제는 Payload 저장소의
+  [템플릿](https://github.com/payloadcms/payload/tree/main/templates)과
+  [예제](https://github.com/payloadcms/payload/tree/main/examples)
+  디렉터리를 참조하세요.
+</Banner>
+
+다음 옵션들을 사용할 수 있습니다:
+
+| 옵션                        | 설명                                                                                                                                                                                    |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`admin`**                | 커스텀 컴포넌트, 라이브 프리뷰 등을 포함한 관리자 패널의 구성 옵션. [자세한 내용](../admin/overview#admin-options).                                                                         |
+| **`bin`**                  | Payload가 실행할 커스텀 bin 스크립트 등록. [자세한 내용](#custom-bin-scripts).                                                                                                              |
+| **`editor`**               | `richText` 필드에서 사용할 Rich Text Editor. [자세한 내용](../rich-text/overview).                                                                                                        |
+| **`db`** \*                | Payload에서 사용할 데이터베이스 어댑터. [자세한 내용](../database/overview).                                                                                                               |
+| **`serverURL`**            | 앱의 절대 URL을 정의하는 데 사용되는 문자열. 프로토콜을 포함하며, 예를 들어 `https://example.com`과 같습니다. 경로는 허용되지 않고, 프로토콜, 도메인 및 (선택적으로) 포트만 가능합니다.        |
+| **`collections`**          | Payload가 관리할 컬렉션의 배열. [자세한 내용](./collections).                                                                                                                              |
+| **`compatibility`**        | 이전 버전의 Payload에 대한 호환성 플래그. [자세한 내용](#compatibility-flags).                                                                                                              |
+| **`globals`**              | Payload가 관리할 글로벌의 배열. [자세한 내용](./globals).                                                                                                                                  |
+| **`cors`**                 | 도메인 간 리소스 공유(CORS)는 주어진 도메인에서 들어오는 요청을 수락하는 메커니즘입니다. `Access-Control-Allow-Headers` 헤더도 커스터마이징할 수 있습니다. [자세한 내용](#cors).           |
+| **`localization`**         | 콘텐츠를 여러 로케일로 번역하려면 선택하세요. [자세한 내용](./localization).                                                                                                               |
+| **`logger`**               | 로거 옵션, 대상 스트림이 있는 로거 옵션 또는 인스턴스화된 로거 인스턴스. [자세한 내용](https://getpino.io/#/docs/api?id=options).                                                           |
+| **`loggingLevels`**        | Payload 오류에 대해 로거에서 사용할 레벨을 재정의하는 객체.                                                                                                                                 |
+| **`graphQL`**              | 커스텀 쿼리 및 뮤테이션, 쿼리 복잡성 제한 등을 포함한 GraphQL 관련 기능 관리. [자세한 내용](../graphql/overview#graphql-options).                                                           |
+| **`cookiePrefix`**         | Payload가 설정하는 모든 쿠키에 접두사로 붙을 문자열.                                                                                                                                        |
+| **`csrf`**                 | Payload가 쿠키를 수락할 URL의 화이트리스트 배열. [자세한 내용](../authentication/cookies#csrf-attacks).                                                                                   |
+| **`defaultDepth`**         | 사용자가 리소스를 요청할 때 `depth`를 지정하지 않으면 이 깊이가 사용됩니다. [자세한 내용](../queries/depth).                                                                                  |
+| **`defaultMaxTextLength`** | 애플리케이션 전체에서 허용되는 최대 문자열 길이. 악의적인 공개 문서 생성을 방지하는 데 도움이 됩니다.                                                                                         |
+| `folders`                  | 글로벌 폴더 설정을 구성하는 선택적 객체. [자세한 내용](../folders/overview).                                                                                                                |
+| `queryPresets`             | 컬렉션 쿼리 프리셋을 구성하는 객체. [자세한 내용](../query-presets/overview).                                                                                                              |
+| **`maxDepth`**             | 애플리케이션 전체에서 허용되는 최대 깊이. 이 설정은 악의적인 쿼리를 방지하는 데 도움이 됩니다. 기본값은 `10`입니다. [자세한 내용](../queries/depth).                                             |
+| **`indexSortableFields`**  | 정렬 성능을 향상시키고 Azure Cosmos 등과 같은 데이터베이스 호환성을 추가하기 위해 데이터베이스에서 모든 정렬 가능한 최상위 필드를 자동으로 인덱싱합니다.                                         |
+| **`upload`**               | 기본 Payload 업로드 구성. [자세한 내용](../upload/overview#payload-wide-upload-options).                                                                                                   |
+| **`routes`**               | Payload가 바인딩하는 라우팅 구조를 제어합니다. [자세한 내용](../admin/overview#root-level-routes).                                                                                           |
+| **`email`**                | Payload에서 사용할 이메일 어댑터 구성. [자세한 내용](../email/overview).                                                                                                                    |
+| **`onInit`**               | 시작 직후 호출되며 Payload 인스턴스를 유일한 인수로 받는 함수.                                                                                                                                |
+| **`debug`**                | 더 자세한 오류 정보를 노출하려면 활성화하세요.                                                                                                                                               |
+| **`telemetry`**            | `false`를 전달하여 Payload 텔레메트리를 비활성화합니다. [자세한 내용](#telemetry).                                                                                                          |
+| **`hooks`**                | 루트 훅의 배열. [자세한 내용](../hooks/overview).                                                                                                                                          |
+| **`plugins`**              | 플러그인의 배열. [자세한 내용](../plugins/overview).                                                                                                                                       |
+| **`endpoints`**            | Payload 라우터에 추가된 커스텀 엔드포인트의 배열. [자세한 내용](../rest-api/overview#custom-endpoints).                                                                                      |
+| **`custom`**               | 커스텀 데이터 추가를 위한 확장 지점(예: 플러그인용).                                                                                                                                         || **`i18n`**                 | 국제화 구성. 관리자 UI에서 지원하려는 모든 i18n 언어를 전달하세요. 기본값은 영어 전용입니다. [자세한 내용](./i18n).                                                                        |
+| **`secret`** \*            | Payload가 암호화 워크플로우(예: 비밀번호 솔트/해싱)에 사용할 안전하고 추측할 수 없는 문자열.                                                                                                  |
+| **`sharp`**                | Payload가 크롭, 초점 선택 및 자동 미디어 크기 조정을 제공하기를 원한다면, Sharp 모듈을 설치하고 여기 구성에 전달하세요.                                                                      |
+| **`typescript`**           | 여기서 TypeScript 설정을 구성하세요. [자세한 내용](#typescript).                                                                                                                           |
+
+_\* 별표는 필수 속성을 나타냅니다._
+
+<Banner type="warning">
+  **참고:** 일부 속성은 클라이언트 측 번들에서 제거됩니다. [자세한
+  내용](../custom-components/overview#accessing-the-payload-config).
+</Banner>
+
+### TypeScript 구성
+
+Payload는 활용할 수 있는 다양한 TypeScript 설정을 노출합니다. 이러한 설정은 [컬렉션](./collections)과 [글로벌](./globals)에 대한 TypeScript 인터페이스를 자동 생성하고, Payload가 모든 [로컬 API](../local-api/overview) 메서드에 대해 [생성된 타입](../typescript/overview)을 사용하도록 보장하는 데 사용됩니다.
+
+TypeScript 설정을 커스터마이징하려면 Payload 구성에서 `typescript` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  // highlight-start
+  typescript: {
+    // ...
+  },
+  // highlight-end
+})
+```
+
+다음 옵션들을 사용할 수 있습니다:
+
+| 옵션                | 설명                                                                                                                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`autoGenerate`** | 기본적으로 Payload는 구성이 정의하는 모든 컬렉션과 글로벌에 대해 TypeScript 인터페이스를 자동 생성합니다. `typescript.autoGenerate: false`로 설정하여 비활성화하세요. [자세한 내용](../typescript/overview). |
+| **`declare`**      | 기본적으로 Payload는 생성된 타입에 `declare` 블록을 추가하여 Payload가 모든 로컬 API 메서드에 대해 생성된 타입을 사용하도록 보장합니다. `typescript.declare: false`로 설정하여 비활성화하세요.                    |
+| **`outputFile`**   | `typescript.outputFile` 속성을 전체 절대 경로로 정의하여 Payload의 자동 생성된 타입의 출력 경로와 파일명을 제어하세요.                                                                                     |
+
+## 구성 위치
+
+Payload 명령줄 스크립트의 경우 Payload 구성을 찾을 수 있어야 합니다. 기본적으로 다음을 포함하여 `payload.config.ts`의 존재를 다양한 위치에서 확인합니다:
+
+1. 루트 현재 작업 디렉터리
+1. `tsconfig`의 `compilerOptions`\*
+1. `dist` 디렉터리\*
+
+_\* 구성 위치 감지는 개발 환경과 프로덕션 환경 간에 다릅니다. 자세한 내용은 아래를 참조하세요._
+
+<Banner type="warning">  **중요:** Payload가 구성 위치를 자동 감지할 수 있도록 `tsconfig.json`이
+  적절히 구성되어 있는지 확인하세요. 존재하지 않거나 적절한
+  `compilerOptions`를 지정하지 않으면 Payload는 현재 작업 디렉터리를
+  기본값으로 사용합니다.
+</Banner>
+
+**개발 모드**
+
+개발 모드에서 구성 파일이 루트에서 발견되지 않으면 Payload는 `tsconfig.json`을 읽고 `rootDir`에 지정된 구성 파일을 찾으려고 시도합니다:
+
+```json
+{
+  // ...
+  // highlight-start
+  "compilerOptions": {
+    "rootDir": "src"
+  }
+  // highlight-end
+}
+```
+
+**프로덕션 모드**
+
+프로덕션 모드에서 Payload는 먼저 `tsconfig.json`의 `outDir`에서 구성 파일을 찾으려고 시도하고, 찾지 못하면 `rootDir` 디렉터리로 폴백합니다:
+
+```json
+{
+  // ...
+  // highlight-start
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src"
+  }
+  // highlight-end
+}
+```
+
+두 위치 모두에 없으면 Payload는 마지막으로 `dist` 디렉터리를 확인합니다.
+
+### 구성 위치 커스터마이징
+
+위의 자동 감지 외에도 Payload 구성에 대한 고유한 위치를 지정할 수 있습니다. 이는 구성이 표준 위치에 없거나 여러 구성 간을 전환하려는 상황에서 유용할 수 있습니다. 이를 위해 Payload는 모든 자동 구성 감지를 우회하는 [환경 변수](../configuration/environment-vars)를 노출합니다.
+
+커스텀 구성 위치를 사용하려면 `PAYLOAD_CONFIG_PATH` 환경 변수를 설정하세요:
+
+```json
+{
+  "scripts": {
+    "payload": "PAYLOAD_CONFIG_PATH=/path/to/custom-config.ts payload"
+  }}
+```
+
+<Banner type="info">
+  **팁:** `PAYLOAD_CONFIG_PATH`는 절대 경로이거나 현재 작업 디렉터리에 상대적인
+  경로일 수 있습니다.
+</Banner>
+
+## 텔레메트리
+
+Payload는 일반 사용에 대한 **완전히 익명의** 텔레메트리 데이터를 수집합니다. 이 데이터는 우리에게 매우 중요하며 성장 상황을 정확히 이해하고 소프트웨어를 가능한 모든 것으로 구축하기 위해 할 수 있는 일을 파악하는 데 도움이 됩니다. 우리가 수집하는 텔레메트리는 또한 성장을 정확한 방식으로 보여주는 데 도움이 되며, 이는 팀을 구축하고 확장하기 위한 투자를 추구할 때 도움이 됩니다. 성장을 정확히 보여줄 수 있다면 Payload를 무료 오픈 소스 소프트웨어로 계속 지원하는 것을 더 효과적으로 할 수 있습니다. 텔레메트리를 비활성화하려면 Payload 구성 내에서 `telemetry: false`를 전달할 수 있습니다.
+
+우리가 추적하는 것에 대한 자세한 정보는 [개인정보보호정책](/privacy)을 참조하세요.
+
+## 교차 출처 리소스 공유(CORS)#cors
+
+교차 출처 리소스 공유(CORS)는 CORS 요청을 허용할 URL의 화이트리스트 배열, 모든 도메인에서 들어오는 요청을 수락하는 와일드카드 문자열(`*`) 또는 다음 속성이 있는 객체로 구성할 수 있습니다:
+
+| 옵션           | 설명                                                                                                   |
+| ------------- | ------------------------------------------------------------------------------------------------------ |
+| **`origins`** | CORS 요청을 허용할 URL의 화이트리스트 배열 또는 모든 도메인에서 들어오는 요청을 수락하는 와일드카드 문자열(`'*'`). |
+| **`headers`** | `Access-Control-Allow-Headers`에 추가될 허용된 헤더 목록.                                                 |
+
+다음은 모든 도메인에서 들어오는 요청을 허용하는 방법을 보여주는 예제입니다:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  // highlight-start
+  cors: '*',
+  // highlight-end
+})
+```
+
+다음은 `Access-Control-Allow-Headers`에 새 헤더(`x-custom-header`)를 추가하는 방법을 보여주는 예제입니다:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  // highlight-start
+  cors: {
+    origins: ['http://localhost:3000'],
+    headers: ['x-custom-header'],
+  },
+  // highlight-end
+})
+```
+
+## TypeScript
+
+구성을 더 쉽고 타입 안전하게 작성하는 데 도움이 되도록 Payload에서 타입을 가져올 수 있습니다. Payload 구성을 나타내는 두 가지 주요 타입인 `Config`와 `SanitizedConfig`가 있습니다.
+
+`Config` 타입은 완전한 형태의 원시 Payload 구성을 나타냅니다. 최소한의 속성만 필수로 표시됩니다. `SanitizedConfig` 타입은 완전히 정제된 후의 Payload 구성을 나타냅니다. 일반적으로 이는 Payload에서 내부적으로만 사용됩니다.
+
+```ts
+import type { Config, SanitizedConfig } from 'payload'
+```
+
+## 서버 vs 클라이언트
+
+Payload 구성은 서버에서만 존재하며 클라이언트 측 코드를 포함할 수 없습니다. 이렇게 함으로써 오류 없이 클라이언트 전용 모듈(예: scss 파일이나 React 컴포넌트)을 가져오는 것을 처리하기 위해 번들러나 Node.js 로더를 사용하지 않고도 모든 서버 환경이나 독립 실행형 스크립트에서 Payload 구성을 로드할 수 있습니다.
+
+내부적으로 Next.js 기반 관리자 패널은 서버 전용 코드를 제거하고 React 컴포넌트로 구성을 풍부하게 하는 ClientConfig를 생성합니다.
+
+## 호환성 플래그
+
+Payload 구성은 최신 버전을 실행하지만 이전 데이터베이스와 함께 사용할 수 있는 호환성 플래그를 받을 수 있습니다. 필요한 경우에만 이러한 플래그를 사용해야 하며, 이러한 플래그를 활성화하기 전에 필요한지 확인해야 합니다.
+
+`allowLocalizedWithinLocalized`
+
+Payload 현지화는 필드별로 작동합니다. 다른 필드 내에 필드를 중첩할 수 있으므로 현지화된 필드 내에 현지화된 필드를 중첩할 수 있지만, 이는 중복되고 불필요합니다. 부모 필드부터 전체 데이터 구조가 현지화될 것이므로 현지화된 부모 필드 내에 현지화된 필드를 정의할 이유가 없습니다.
+
+기본적으로 Payload는 부모 필드가 현지화된 경우 하위 필드에서 `localized: true` 속성을 제거합니다. 3.0 이전의 기존 Payload MongoDB 데이터베이스가 있고 마이그레이션 없이 유지하려는 중첩된 현지화 필드가 있는 경우에만 이 호환성 플래그를 `true`로 설정하세요.
+
+## 커스텀 bin 스크립트
+
+`bin` 구성 속성을 사용하여 `npx payload`에 고유한 스크립트를 주입할 수 있습니다.
+`pnpm payload seed`에 대한 예제:
+
+1단계: `payload.config.ts`와 같은 폴더에 `seed.ts` 파일을 생성합니다:
+
+```ts
+import type { SanitizedConfig } from 'payload'
+
+import payload from 'payload'
+
+// 스크립트는 정제된 구성을 받는 "script" 함수 내보내기를 정의해야 합니다
+export const script = async (config: SanitizedConfig) => {
+  await payload.init({ config })
+  await payload.create({
+    collection: 'pages',
+    data: { title: 'my title' },
+  })
+  payload.logger.info('Successfully seeded!')
+  process.exit(0)
+}
+```
+
+2단계: `bin`에 `seed` 스크립트를 추가합니다:
+
+```ts
+export default buildConfig({
+  bin: [
+    {
+      scriptPath: path.resolve(dirname, 'seed.ts'),
+      key: 'seed',
+    },
+  ],
+})
+```
+
+이제 다음을 사용하여 명령을 실행할 수 있습니다:
+
+```sh
+pnpm payload seed
+```

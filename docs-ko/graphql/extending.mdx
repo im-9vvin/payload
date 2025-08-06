@@ -1,0 +1,168 @@
+---
+title: 자신만의 Queries와 Mutations 추가하기
+label: Custom Queries and Mutations
+order: 20
+desc: Payload를 사용하면 자신만의 GraphQL queries와 mutations를 추가할 수 있습니다. 다음 지침에 따라 메인 Payload Config에서 GraphQL을 설정하기만 하면 됩니다.
+keywords: graphql, resolvers, mutations, custom, queries, config, configuration, documentation, Content Management System, cms, headless, javascript, node, react, nextjs
+---
+
+Payload가 정의한 모든 타입을 활용하여 자신만의 GraphQL queries와 mutations를 Payload에 추가할 수 있습니다.
+
+이를 위해서는 다음과 같이 메인 Payload Config에 queries와 mutations를 추가하세요:
+
+| Config Path         | Description                                                                 |
+| ------------------- | --------------------------------------------------------------------------- |
+| `graphQL.queries`   | 사용자 정의 GraphQL queries의 키를 포함하는 객체를 반환하는 함수   |
+| `graphQL.mutations` | 사용자 정의 GraphQL mutations의 키를 포함하는 객체를 반환하는 함수 |
+
+위 속성들은 각각 다음 인수들과 함께 정의된 함수를 받습니다:
+
+**`GraphQL`**
+
+이는 Payload의 GraphQL 의존성입니다. GraphQL이 작동하는 방식에 기반한 기본 제한사항으로 인해 자신만의 GraphQL 사본을 의존성으로 설치해서는 안 됩니다. 대신 이 인수를 통해 Payload에서 제공하는 사본을 사용할 수 있습니다.
+
+**`payload`**
+
+이는 현재 실행 중인 Payload 인스턴스의 사본으로, 모든 Collections과 Globals에 대한 기존 GraphQL 타입 등을 제공합니다.
+
+## Return value
+
+`graphQL.queries`와 `graphQL.mutations` 함수는 모두 새로 작성된 GraphQL queries와 mutations와 동일한 속성을 가진 객체를 반환해야 합니다.
+
+## Example
+
+`payload.config.js`:```ts
+import { buildConfig } from 'payload'
+import myCustomQueryResolver from './graphQL/resolvers/myCustomQueryResolver'
+
+export default buildConfig({
+  graphQL: {
+    // highlight-start
+    queries: (GraphQL, payload) => {
+      return {
+        MyCustomQuery: {
+          type: new GraphQL.GraphQLObjectType({
+            name: 'MyCustomQuery',
+            fields: {
+              text: {
+                type: GraphQL.GraphQLString,
+              },
+              someNumberField: {
+                type: GraphQL.GraphQLFloat,
+              },
+            },
+          }),
+          args: {
+            argNameHere: {
+              type: new GraphQL.GraphQLNonNull(GraphQLString),
+            },
+          },
+          resolve: myCustomQueryResolver,
+        },
+      }
+    },
+    // highlight-end
+  },
+})
+```
+
+## Resolver function
+
+resolver에서는 GraphQL이 관계 데이터와 같은 중첩된 값에 대한 queries를 올바르게 해결할 수 있도록 Local API에서 직접 데이터를 반환하는 경우 `depth: 0`을 설정해야 합니다.
+
+함수는 사용할 수 있는 네 개의 인수를 받습니다:
+
+Example
+
+```ts
+;async (obj, args, context, info) => {}
+```
+
+**`obj`**
+
+이전 객체입니다. 자주 사용되지 않으며 보통 버려집니다.**`args`**
+
+query나 mutation에서 사용 가능한 인수들이 여기에서 사용할 수 있으며, 이는 먼저 사용자 정의 작업을 통해 구성되어야 합니다.
+
+**`context`**
+
+다른 Payload API 핸들러와 같이 `payload`, `user` 인스턴스 등을 제공하는 `req`와 `res` 객체를 포함하는 객체입니다.
+
+**`info`**
+
+현재 실행 중인 GraphQL 작업에 대한 컨텍스트 정보입니다. 여기서 스키마 정보뿐만 아니라 이 resolver 함수가 실행되는 위치에 대한 컨텍스트 정보를 얻을 수 있습니다.
+
+## Types
+
+API를 더 확장하는 데 도움이 되는 몇 가지 타입과 유틸리티를 공개했습니다. Payload는 GraphQL.js 패키지를 사용하며, [공식 문서](https://graphql.org/graphql-js/type/)에서 사용 가능한 타입의 전체 목록을 볼 수 있습니다.
+
+**`GraphQLJSON`** & **`GraphQLJSONObject`**
+
+```ts
+import { GraphQLJSON, GraphQLJSONObject } from '@payloadcms/graphql/types'
+```
+
+**`GraphQL`**
+
+Payload에서 사용하는 GraphQL 패키지를 직접 import할 수 있으며, 타이핑에 가장 유용합니다.
+
+```ts
+import { GraphQL } from '@payloadcms/graphql/types'
+```
+
+<Banner type="warning">
+  queries, mutations 및 핸들러의 경우 인수를 통해 제공되는 `GraphQL`과
+  `payload` 인스턴스를 사용해야 합니다.
+</Banner>**`buildPaginatedListType`**
+
+이는 Payload의 생성된 스키마와 유사한 페이지네이션된 결과에 대한 새로운 GraphQL 타입을 빌드할 수 있게 해주는 유틸리티 함수입니다.
+두 개의 인수를 받는데, 첫 번째는 이 새 스키마 타입의 이름이고 두 번째는 docs 매개변수에서 사용될 GraphQL 타입입니다.
+
+Example
+
+```ts
+import { buildPaginatedListType } from '@payloadcms/graphql/types'
+
+export const getMyPosts = (GraphQL, payload) => {
+  return {
+    args: {},
+    resolve: Resolver,
+    // 새 타입의 이름은 고유해야 합니다
+    type: buildPaginatedListType(
+      'AuthorPosts',
+      payload.collections['posts'].graphQL?.type,
+    ),
+  }
+}
+```
+
+**`payload.collections.slug.graphQL`**
+
+제공된 API를 더 확장하고 싶다면 collection slug의 `graphQL` 객체에는 타입, mutations 및 queries에 대한 코드를 재사용하는 데 도움이 되는 추가 타입이 포함되어 있습니다.
+
+```ts
+graphQL?: {
+  type: GraphQLObjectType
+  paginatedType: GraphQLObjectType
+  JWT: GraphQLObjectType
+  versionType: GraphQLObjectType
+  whereInputType: GraphQLInputObjectType
+  mutationInputType: GraphQLNonNull<any>
+  updateMutationInputType: GraphQLNonNull<any>
+}
+```## Best practices
+
+코드를 구조화하는 몇 가지 방법이 있으며, 모든 로직을 한 곳에 보관할 수 있도록 전용 `graphql` 디렉토리를 사용하는 것을 권장합니다. 이를 구조화하는 방법에 대해서는 완전한 자유가 있지만, 일반적인 패턴은 함수를 타입별로 그룹화하고 resolver와 함께 구성하는 것입니다.
+
+Example
+
+```
+src/graphql
+---- queries/
+     index.ts
+    -- myCustomQuery/
+       index.ts
+       resolver.ts
+
+---- mutations/
+```

@@ -1,0 +1,171 @@
+---
+title: Payload 개념
+label: 개념
+order: 20
+desc: Payload는 작고 직관적인 개념 세트를 기반으로 합니다. 주요 개념에는 컬렉션, 글로벌, 필드 등이 포함됩니다.
+keywords: 문서, 시작하기, 가이드, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+Payload는 작고 직관적인 고수준 개념 세트를 기반으로 합니다. Payload 작업을 시작하기 전에, Payload를 논의할 때 공통의 언어와 이해를 확립하기 위해 이러한 개념들을 숙지하는 것이 좋습니다.
+
+## Config
+
+Payload Config는 Payload가 수행하는 모든 작업의 중심입니다. 이는 간단하고 직관적인 API를 통해 애플리케이션을 깊이 구성할 수 있게 해줍니다. Payload Config는 무한히 확장 가능한 완전히 타입이 지정된 JavaScript 객체입니다. [자세한 내용](../configuration/overview).
+
+## 데이터베이스
+
+Payload는 데이터베이스에 구애받지 않습니다. 즉, 데이터베이스 어댑터라고 알려진 것을 통해 Payload의 친숙한 API 뒤에서 모든 유형의 데이터베이스를 사용할 수 있습니다. [자세한 내용](../database/overview).
+
+## 컬렉션
+
+컬렉션은 공통 스키마를 공유하는 문서라고 불리는 레코드 그룹입니다. 각 컬렉션은 정의한 [필드](../fields/overview)를 기반으로 [데이터베이스](../database/overview)에 저장됩니다. [자세한 내용](../configuration/collections).
+
+## 글로벌
+
+글로벌은 많은 면에서 [컬렉션](../configuration/collections)과 유사하지만 단일 문서에만 해당합니다. 각 글로벌은 정의한 [필드](../fields/overview)를 기반으로 [데이터베이스](../database/overview)에 저장됩니다. [자세한 내용](../configuration/globals).
+
+## 필드
+
+필드는 Payload의 구성 요소입니다. 필드는 [데이터베이스](../database/overview)에 저장될 문서의 스키마를 정의하고 관리자 패널 내에서 해당 UI를 자동으로 생성합니다. [자세한 내용](../fields/overview).
+
+## 훅
+
+훅을 사용하면 읽기 전, 생성 후 등과 같은 문서 라이프사이클의 특정 이벤트 중에 자체 부작용을 실행할 수 있습니다. [자세한 내용](../hooks/overview).
+
+## 인증
+
+Payload는 즉시 사용 가능한 안전하고 이식 가능한 사용자 계정 관리 방법을 제공합니다. Payload 인증은 관리자 패널뿐만 아니라 자체 외부 애플리케이션에서도 사용하도록 설계되었습니다. [자세한 내용](../authentication/overview).
+
+## 접근 제어
+
+접근 제어는 사용자가 주어진 문서에 대해 읽기, 업데이트 등 무엇을 할 수 있고 할 수 없는지, 그리고 관리자 패널 내에서 무엇을 볼 수 있고 볼 수 없는지를 결정합니다. [자세한 내용](../access-control/overview).
+
+## 관리자 패널
+
+Payload는 사용자와 데이터를 관리할 수 있는 아름답고 완전히 타입 안전한 인터페이스를 동적으로 생성합니다. 관리자 패널은 Next.js App Router를 사용하여 구축된 React 애플리케이션입니다. [자세한 내용](../admin/overview).
+
+## 데이터 검색
+
+Payload가 수행하는 모든 작업(생성, 읽기, 업데이트, 삭제, 로그인, 로그아웃 등)은 세 가지 API를 통해 노출됩니다:
+
+- [Local API](#local-api) - 매우 빠른 데이터베이스 직접 액세스
+- [REST API](#rest-api) - 데이터 쿼리 및 변경을 위한 표준 HTTP 엔드포인트
+- [GraphQL](#graphql-api) - GraphQL Playground가 포함된 완전한 GraphQL API
+
+<Banner type="success">
+  **참고:** 이 모든 API는 정확히 동일한 쿼리 언어를 공유합니다. [자세한
+  내용](../queries/overview).
+</Banner>
+
+### Local API
+
+Payload의 가장 강력한 측면 중 하나는 [Local API](../local-api/overview)를 통해 데이터에 대한 데이터베이스 직접 액세스를 제공한다는 사실입니다. 이는 _매우_ 빠르며 일반적인 HTTP 오버헤드가 발생하지 않습니다—Node.js에서 직접 데이터베이스를 쿼리합니다.
+
+Local API는 TypeScript로 작성되어 강력하게 타입이 지정되어 있고 사용하기 매우 좋습니다. 커스텀 Next.js 라우트, Payload 훅, Payload 접근 제어, React 서버 컴포넌트를 포함한 서버의 모든 곳에서 작동합니다.
+
+다음은 Local API를 사용하여 데이터를 가져오는 React 서버 컴포넌트의 간단한 예입니다:
+
+```tsx
+import React from 'react'
+import config from '@payload-config'
+import { getPayload } from 'payload'
+
+const MyServerComponent: React.FC = () => {
+  const payload = await getPayload({ config })
+
+  // 여기서 `findResult`는 `PaginatedDocs<Page>`로 완전히 타입이 지정됩니다.
+  // 반환된 `docs`와 함께 반환된/전체 사용 가능한 항목 수 등에 대한
+  // 정보를 갖게 됩니다.
+  const findResult = await payload.find({ collection: 'pages' })
+
+  return (
+    <ul>
+      {findResult.docs.map((page) => {
+        // 여기서 원하는 것을 렌더링하세요!
+        // `page`는 Pages 컬렉션으로 완전히 타입이 지정됩니다!
+      })}
+    </ul>
+  )
+}
+```
+
+<Banner type="info">
+  Local API에 대한 자세한 정보는 [여기를 클릭](../local-api/overview)하세요.
+</Banner>
+
+### REST API
+
+기본적으로 Payload [REST API](../rest-api/overview)는 앱의 `/api` 경로에 자동으로 마운트됩니다.
+
+예를 들어, `pages`라는 컬렉션이 있는 경우:
+
+```ts
+fetch('https://localhost:3000/api/pages') // highlight-line
+  .then((res) => res.json())
+  .then((data) => console.log(data))
+```
+
+<Banner type="info">
+  REST API에 대한 자세한 정보는 [여기를 클릭](../rest-api/overview)하세요.
+</Banner>
+
+### GraphQL API
+
+Payload는 전용 [GraphQL API](../graphql/overview)를 통해 GraphQL 쿼리와 뮤테이션을 자동으로 노출합니다. 기본적으로 GraphQL 라우트 핸들러는 앱의 `/api/graphql` 경로에 마운트됩니다. 또한 앱의 `/api/graphql-playground` 경로에서 액세스할 수 있는 완전한 GraphQL Playground를 찾을 수 있습니다.
+
+Payload의 GraphQL 엔드포인트와 함께 모든 GraphQL 클라이언트를 사용할 수 있습니다. 다음은 몇 가지 패키지입니다:
+
+- [`graphql-request`](https://www.npmjs.com/package/graphql-request) - 매우 가벼운 GraphQL 클라이언트
+- [`@apollo/client`](https://www.apollographql.com/docs/react/api/core/ApolloClient/) - 많은 좋은 기능을 가진 업계 표준 GraphQL 클라이언트
+
+<Banner type="info">
+  GraphQL API에 대한 자세한 정보는 [여기를 클릭](../graphql/overview)하세요.
+</Banner>
+
+## 패키지 구조
+
+Payload는 핵심 `payload` 패키지를 최대한 가볍게 유지하기 위해 전용 패키지 세트로 추상화되어 있습니다. 이를 통해 고유한 프로젝트 요구 사항에 따라 Payload의 필요한 부분만 설치할 수 있습니다.
+
+<Banner type="warning">
+  **중요:** 모든 공식 Payload 패키지의 버전 번호는 항상 동기화되어 게시됩니다.
+  모든 공식 Payload 패키지에 대해 항상 일치하는 버전을 사용해야 합니다.
+</Banner>
+
+`payload`
+
+`payload` 패키지는 Payload의 핵심 비즈니스 로직이 있는 곳입니다. Payload를 슈퍼파워를 가진 ORM으로 생각할 수 있습니다—`find`, `create`, `update`, `delete`와 같은 모든 Payload "작업"에 대한 로직을 포함하고 [Local API](../local-api/overview)를 노출합니다. [접근 제어](../access-control/overview), [훅](../hooks/overview), [검증](../fields/overview#validation) 등을 실행합니다.
+
+Payload 자체는 매우 컴팩트하며 모든 Node 환경에서 사용할 수 있습니다. `payload`가 설치되어 있고 Payload Config에 액세스할 수 있는 한, 불필요한 HTTP 레이어를 거치지 않고 직접 데이터베이스를 쿼리하고 변경할 수 있습니다.
+
+Payload는 또한 `payload`에서 직접 가져올 수 있는 모든 TypeScript 정의를 포함합니다.
+
+다음은 일반적인 Payload 타입을 가져오는 방법입니다:
+
+```ts
+import { Config, CollectionConfig, GlobalConfig, Field } from 'payload'
+```
+
+`@payloadcms/next`
+
+Payload 자체가 직접 데이터베이스 액세스와 Payload 비즈니스 로직 제어를 담당하는 반면, `@payloadcms/next` 패키지는 관리자 패널과 [REST API](../rest-api/overview) 및 [GraphQL API](../graphql/overview)를 포함하여 Payload가 노출하는 전체 HTTP 레이어를 담당합니다.
+
+`@payloadcms/graphql`
+
+Payload의 모든 GraphQL 기능은 별도의 패키지로 추상화됩니다. Payload, 관리자 UI 및 REST API는 GraphQL과 전혀 중복되지 않으며, GraphQL을 사용하지 않는 경우 GraphQL로 인한 성능 오버헤드가 발생하지 않습니다. 그러나 수동으로 설치할 필요가 없도록 `@payloadcms/next` 패키지 내에 설치되어 있습니다. 하지만 GraphQL을 사용하는 경우 `package.json`에 GraphQL을 별도로 설치해야 합니다.
+
+`@payloadcms/ui`
+
+이것은 Payload의 관리자 패널이 사용하는 UI 라이브러리입니다. 모든 컴포넌트는 이 패키지에서 내보내지며 Payload 관리자 UI에 대한 확장을 구축하거나 자체 React 앱에서 Payload 컴포넌트를 사용하려는 경우 재사용할 수 있습니다. 일부 내보내기는 서버 컴포넌트이고 일부는 클라이언트 컴포넌트입니다.
+
+`@payloadcms/db-postgres`, `@payloadcms/db-vercel-postgres`, `@payloadcms/db-mongodb`, `@payloadcms/db-sqlite`
+
+프로젝트에 사용할 데이터베이스 어댑터를 선택할 수 있으며, 어떤 것을 선택하든 Payload의 전체 데이터 레이어는 이러한 패키지 내에 포함됩니다. 주어진 프로젝트에 대해 한 번에 하나만 사용할 수 있습니다.
+
+`@payloadcms/richtext-lexical`, `@payloadcms/richtext-slate`
+
+Payload의 리치 텍스트 기능은 별도의 패키지로 추상화되며 프로젝트에서 리치 텍스트를 활성화하려면 이러한 패키지 중 하나를 설치해야 합니다. 모든 새 프로젝트에는 Lexical을 권장하며, 이것이 앞으로 Payload가 노력을 집중할 곳이지만, 이미 구축한 경우 Slate도 여전히 지원됩니다.
+
+<Banner type="info">
+  **참고:** 리치 텍스트는 전적으로 선택 사항이며 프로젝트에 필요하지 않을 수
+  있습니다.
+</Banner>

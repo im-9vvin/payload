@@ -1,0 +1,313 @@
+---
+title: Postgres
+label: Postgres
+order: 60
+desc: Payload는 공식적으로 지원되는 Drizzle 데이터베이스 어댑터를 통해 Postgres를 지원합니다.
+keywords: Postgres, 문서, typescript, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+Payload를 Postgres와 함께 사용하려면 `@payloadcms/db-postgres` 패키지를 설치하세요. 이는 Drizzle ORM과 `node-postgres`를 활용하여 제공하는 Postgres 데이터베이스와 상호작용합니다.
+
+또는 `@payloadcms/db-vercel-postgres` 패키지도 사용 가능하며 Vercel과 함께 사용하도록 최적화되어 있습니다.
+
+개발 모드에서 데이터베이스에 대한 변경 사항을 자동으로 관리하고, 스키마와 다른 데이터베이스 환경을 동기화하는 데 활용할 수 있는 완전한 마이그레이션 제어 도구를 제공합니다. DDL 변환은 자동으로 생성됩니다.
+
+Payload가 Postgres를 사용하도록 구성하려면 다음과 같이 Payload Config에 `postgresAdapter`를 전달하세요:
+
+### 사용법
+
+`@payloadcms/db-postgres`:
+
+```ts
+import { postgresAdapter } from '@payloadcms/db-postgres'
+
+export default buildConfig({
+  // 여기서 Postgres 어댑터를 구성합니다
+  db: postgresAdapter({
+    // Postgres 관련 인수가 여기에 들어갑니다.
+    // `pool`은 필수입니다.
+    pool: {
+      connectionString: process.env.DATABASE_URI,
+    },
+  }),
+})
+````@payloadcms/db-vercel-postgres`:
+
+```ts
+import { vercelPostgresAdapter } from '@payloadcms/db-vercel-postgres'
+
+export default buildConfig({
+  // 옵션이 제공되지 않으면 자동으로 process.env.POSTGRES_URL을 사용합니다.
+  db: vercelPostgresAdapter(),
+  // 선택적으로, @vercel/postgres 패키지와 동일한 옵션을 허용할 수 있습니다.
+  db: vercelPostgresAdapter({
+    pool: {
+      connectionString: process.env.DATABASE_URL,
+    },
+  }),
+})
+```
+
+<Banner type="info">
+  **참고:** `vercelPostgresAdapter`를 사용하는 경우
+  `process.env.POSTGRES_URL` 또는 `pool.connectionString`이 로컬
+  데이터베이스를 가리킨다면 (예: 호스트 이름이 `localhost` 또는 `127.0.0.1`)
+  `@vercel/postgres` 대신 풀링을 위해 `pg` 모듈을 사용합니다.
+  이는 `@vercel/postgres`가 로컬 데이터베이스에서 작동하지 않기 때문입니다.
+  이 동작을 비활성화하려면 어댑터의 args에 `forceUseVercelPostgres: true`를
+  전달하고 Docker Neon DB 설정에 대한 [Vercel
+  가이드](https://vercel.com/docs/storage/vercel-postgres/local-development#option-2:-local-postgres-instance-with-docker)를
+  따르십시오.
+</Banner>
+
+## 옵션
+
+| 옵션                        | 설명                                                                                                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pool` \*                   | Drizzle과 `node-postgres` 또는 `@vercel/postgres`에 전달될 [Pool 연결 옵션](https://orm.drizzle.team/docs/quick-postgresql/node-postgres)                                      |
+| `push`                      | 개발 모드에서 Drizzle의 [`db push`](https://orm.drizzle.team/kit-docs/overview#prototyping-with-db-push)를 비활성화합니다. 기본적으로 `push`는 개발 모드에서만 활성화됩니다.  |
+| `migrationDir`              | 마이그레이션이 저장되는 디렉토리를 커스터마이징합니다.                                                                                                                          |
+| `schemaName` (experimental) | 사용할 postgres 스키마에 대한 문자열, 기본값은 'public'입니다.                                                                                                                  |
+| `idType`                    | id 컬럼에 주어지는 데이터 타입에 사용되는 'serial' 또는 'uuid' 문자열입니다.                                                                                                   |
+| `transactionOptions`        | 트랜잭션을 위한 PgTransactionConfig 객체 또는 트랜잭션 사용을 비활성화하려면 `false`로 설정합니다. [자세한 내용](https://orm.drizzle.team/docs/transactions)                |
+| `disableCreateDatabase`     | 데이터베이스가 존재하지 않는 경우 자동 데이터베이스 생성을 비활성화하려면 `true`를 전달합니다. 기본값은 `false`입니다.                                                        |
+| `localesSuffix`             | 지역화된 필드를 저장하기 위한 테이블 이름 끝에 추가되는 문자열. 기본값은 '\_locales'입니다.                                                                                    |
+| `relationshipsSuffix`       | 관계를 저장하기 위한 테이블 이름 끝에 추가되는 문자열. 기본값은 '\_rels'입니다.                                                                                                |
+| `versionsSuffix`            | 버전을 저장하기 위한 테이블 이름 끝에 추가되는 문자열. 기본값은 '\_v'입니다.                                                                                                   |
+| `beforeSchemaInit`          | Drizzle 스키마 훅. 스키마가 빌드되기 전에 실행됩니다. [자세한 내용](#beforeschemainit)                                                                                         |
+| `afterSchemaInit`           | Drizzle 스키마 훅. 스키마가 빌드된 후에 실행됩니다. [자세한 내용](#afterschemainit)                                                                                            |
+| `generateSchemaOutputFile`  | `payload generate:db-schema`에서 생성된 스키마 파일 경로를 재정의합니다. 기본값은 `{CWD}/src/payload-generated.schema.ts`입니다.                                             |
+| `allowIDOnCreate`           | 커스텀 ID 필드를 사용하지 않고 create API 작업에서 데이터에 전달된 `id`를 사용하려면 `true`로 설정합니다.                                                                     |
+| `readReplicas`              | 읽기 트래픽이 많은 경우 오프로드하는 데 사용할 수 있는 DB 읽기 복제본 연결 문자열의 배열입니다.                                                                                |
+| `blocksAsJSON`              | 대량의 블록을 사용할 때 성능을 향상시킬 수 있는 관계형 구조 대신 JSON 컬럼으로 블록을 저장합니다                                                                               |
+
+## Drizzle에 대한 액세스
+
+Payload가 초기화된 후, 이 어댑터는 필요한 경우 사용할 수 있도록 Drizzle의 전체 기능을 노출합니다.
+
+타입 안전성을 보장하려면 먼저 다음과 같이 Drizzle 스키마를 생성해야 합니다:
+
+```sh
+npx payload generate:db-schema
+```
+
+그런 다음 다음과 같이 Drizzle에 액세스할 수 있습니다:
+
+```ts
+import { posts } from './payload-generated-schema'// Drizzle을 설치하지 않으려면 재내보내기 경로에서 drizzle이 가진 모든 것을 가져올 수 있습니다.
+import { eq, sql, and } from '@payloadcms/db-postgres/drizzle'
+
+// Drizzle의 쿼리 API: https://orm.drizzle.team/docs/rqb
+const posts = await payload.db.drizzle.query.posts.findMany()
+// Drizzle의 Select API https://orm.drizzle.team/docs/select
+const result = await payload.db.drizzle
+  .select()
+  .from(posts)
+  .where(
+    and(eq(posts.id, 50), sql`lower(${posts.title}) = 'example post title'`),
+  )
+```
+
+## 테이블, 관계, enum
+
+Drizzle을 직접 노출하는 것 외에도 모든 테이블, Drizzle 관계, enum config도 `payload.db` 속성을 통해 노출됩니다.
+
+- 테이블 - `payload.db.tables`
+- Enum - `payload.db.enums`
+- 관계 - `payload.db.relations`
+
+## 개발 모드에서의 프로토타이핑
+
+Drizzle은 개발 모드에서 로컬에서 작업하는 두 가지 방법을 제공합니다.
+
+첫 번째는 [`db push`](https://orm.drizzle.team/kit-docs/overview#prototyping-with-db-push)로, Payload Config(따라서 Drizzle 스키마)에 변경한 내용을 데이터베이스에 자동으로 푸시하므로 Payload Config를 변경할 때마다 수동으로 마이그레이션할 필요가 없습니다. 이는 개발 모드에서만 작동하며 [`migrate`](/docs/database/migrations) 명령을 수동으로 실행하는 것과 혼용하면 안 됩니다.
+
+개발 모드에서 변경한 내용이 데이터 손실을 수반하는 경우 경고를 받게 됩니다. Push는 기본적으로 활성화되어 있지만 원한다면 비활성화할 수 있습니다.
+
+또는 `push`를 비활성화하고 마이그레이션에만 의존하여 로컬 데이터베이스를 Payload Config와 동기화할 수 있습니다.
+
+## 마이그레이션 워크플로우
+
+Postgres에서 마이그레이션은 Payload를 사용하는 데 있어 기본적인 측면이며 작동 방식에 익숙해져야 합니다.
+
+마이그레이션에 대한 자세한 정보는 [여기를 클릭하세요](./migrations#when-to-run-migrations).
+
+## Drizzle 스키마 훅
+
+### beforeSchemaInit
+
+스키마가 빌드되기 전에 실행됩니다. 이 훅을 사용하여 Payload가 관리하지 않는 테이블로 데이터베이스 구조를 확장할 수 있습니다.
+
+```ts
+import { postgresAdapter } from '@payloadcms/db-postgres'
+import {
+  integer,
+  pgTable,
+  serial,
+} from '@payloadcms/db-postgres/drizzle/pg-core'
+
+postgresAdapter({
+  beforeSchemaInit: [
+    ({ schema, adapter }) => {
+      return {
+        ...schema,
+        tables: {
+          ...schema.tables,
+          addedTable: pgTable('added_table', {
+            id: serial('id').notNull(),
+          }),
+        },
+      }
+    },
+  ],
+})
+```
+
+한 가지 사용 사례는 Payload로 마이그레이션할 때 기존 데이터베이스 구조를 보존하는 것입니다. 기본적으로 Payload는 현재 데이터베이스 스키마를 삭제하는데, 이 시나리오에서는 바람직하지 않을 수 있습니다.
+데이터베이스에서 Drizzle 스키마를 빠르게 생성하려면 [Drizzle Introspection](https://orm.drizzle.team/kit-docs/commands#introspect--pull)을 사용할 수 있습니다.
+다음과 같은 `schema.ts` 파일을 얻어야 합니다:
+
+```ts
+import {
+  pgTable,
+  uniqueIndex,
+  serial,
+  varchar,
+  text,
+} from 'drizzle-orm/pg-core'
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  fullName: text('full_name'),
+  phone: varchar('phone', { length: 256 }),
+})
+
+export const countries = pgTable(
+  'countries',
+  {
+    id: serial('id').primaryKey(),
+    name: varchar('name', { length: 256 }),
+  },
+  (countries) => {
+    return {
+      nameIndex: uniqueIndex('name_idx').on(countries.name),
+    }
+  },
+)
+```
+
+이를 config로 가져와서 다음과 같이 `beforeSchemaInit` 훅으로 스키마에 추가할 수 있습니다:
+
+```ts
+import { postgresAdapter } from '@payloadcms/db-postgres'
+import { users, countries } from '../drizzle/schema'
+
+postgresAdapter({
+  beforeSchemaInit: [
+    ({ schema, adapter }) => {
+      return {
+        ...schema,
+        tables: {
+          ...schema.tables,
+          users,
+          countries,
+        },
+      }
+    },
+  ],
+})
+```
+
+Payload가 컬렉션과 테이블 이름이 겹치지 않도록 해야 합니다. 예를 들어, "users"라는 slug를 가진 컬렉션이 이미 있다면, 이 컬렉션의 테이블 이름을 변경하기 위해 slug나 `dbName`을 변경해야 합니다.
+
+### afterSchemaInit
+
+Drizzle 스키마가 빌드된 후 실행됩니다. 이 훅을 사용하여 Payload에서 지원되지 않는 기능으로 스키마를 수정하거나 Payload config에 있기를 원하지 않는 컬럼을 추가할 수 있습니다.
+테이블을 확장하기 위해 Payload는 인수에 `extendTable` 유틸리티를 노출합니다. [Drizzle 문서](https://orm.drizzle.team/docs/sql-schema-declaration)를 참조할 수 있습니다.
+다음 예제는 `extra_integer_column` 컬럼과 `country` 및 `city` 컬럼에 대한 복합 인덱스를 추가합니다.
+
+```ts
+import { postgresAdapter } from '@payloadcms/db-postgres'
+import { index, integer } from '@payloadcms/db-postgres/drizzle/pg-core'
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  collections: [
+    {
+      slug: 'places',
+      fields: [
+        {
+          name: 'country',
+          type: 'text',
+        },
+        {
+          name: 'city',
+          type: 'text',
+        },
+      ],
+    },
+  ],
+  db: postgresAdapter({
+    afterSchemaInit: [
+      ({ schema, extendTable, adapter }) => {
+        extendTable({
+          table: schema.tables.places,
+          columns: {
+            extraIntegerColumn: integer('extra_integer_column'),
+          },
+          extraConfig: (table) => ({
+            country_city_composite_index: index(
+              'country_city_composite_index',
+            ).on(table.country, table.city),
+          }),
+        })
+
+        return schema
+      },
+    ],
+  }),
+})
+```
+
+### 생성된 스키마에 대한 참고:
+
+스키마 훅에서 추가된 컬럼과 테이블은 `payload generate:db-schema`를 통해 생성된 Drizzle 스키마에 추가되지 않습니다.
+거기에 있기를 원한다면 이 파일을 수동으로 편집하거나 `beforeSchemaInit`에서 내부 Payload "raw" SQL 스키마를 변경해야 합니다:
+
+```ts
+import { postgresAdapter } from '@payloadcms/db-postgres'
+
+postgresAdapter({
+  beforeSchemaInit: [
+    ({ schema, adapter }) => {
+      // 새 테이블 추가
+      adapter.rawTables.myTable = {
+        name: 'my_table',
+        columns: {
+          my_id: {
+            name: 'my_id',
+            type: 'serial',
+            primaryKey: true,
+          },
+        },
+      }
+
+      // Payload가 생성한 테이블에 새 컬럼 추가:
+      adapter.rawTables.posts.columns.customColumn = {
+        name: 'custom_column',
+        // Payload SQL이 Drizzle이 하는 모든 것을 지원하지는 않는다는 점에 유의하세요.
+        type: 'integer',
+        notNull: true,
+      }
+      // Payload가 생성한 테이블에 새 인덱스 추가:
+      adapter.rawTables.posts.indexes.customColumnIdx = {
+        name: 'custom_column_idx',
+        unique: true,
+        on: ['custom_column'],
+      }
+
+      return schema
+    },
+  ],
+})
+```

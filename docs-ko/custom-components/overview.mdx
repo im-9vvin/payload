@@ -1,0 +1,550 @@
+---
+title: 자체 React 컴포넌트로 교체하기
+label: 개요
+order: 10
+desc: 자체 React 컴포넌트로 교체하여 관리 패널을 완전히 커스터마이즈하세요. 필드 추가, 뷰 제거, 라우트 업데이트 및 기능 변경으로 완벽한 대시보드를 만드세요.
+keywords: admin, components, custom, documentation, Content Management System, cms, headless, javascript, node, react, nextjs
+---
+
+Payload [관리 패널](../admin/overview)은 쉬운 커스터마이징과 UI의 완전한 제어를 가능하게 하기 위해 가능한 한 최소화되고 직관적으로 설계되었습니다. Payload가 이러한 수준의 커스터마이징을 지원하기 위해, Payload는 [Payload 구성](../configuration/overview)을 통해 자체 React 컴포넌트를 제공할 수 있는 패턴을 제공합니다.
+
+Payload의 모든 사용자 정의 컴포넌트는 기본적으로 [React 서버 컴포넌트](https://react.dev/reference/rsc/server-components)입니다. 이는 프론트엔드에서 직접 [로컬 API](../local-api/overview) 사용을 가능하게 합니다. 사용자 정의 컴포넌트는 극도로 세밀한 제어와 컨트롤을 위해 관리 패널의 거의 모든 부분에서 사용할 수 있습니다.
+
+<Banner type="success">
+  **참고:** 클라이언트 컴포넌트도 완전히 지원됩니다. 앱에서 클라이언트
+  컴포넌트를 사용하려면 간단히 `'use client'` 지시문을 포함하세요. Payload는
+  자동으로 감지하고 컴포넌트를 렌더링하기 전에 모든
+  [비직렬화 가능한](https://react.dev/reference/rsc/use-client#serializable-types)
+  기본 props를 제거합니다. [자세한
+  내용](#client-components).
+</Banner>
+
+Payload에는 네 가지 주요 유형의 사용자 정의 컴포넌트가 있습니다:
+
+- [루트 컴포넌트](./root-components)
+- [컬렉션 컴포넌트](../configuration/collections#custom-components)
+- [글로벌 컴포넌트](../configuration/globals#custom-components)
+- [필드 컴포넌트](../fields/overview#custom-components)
+
+자체 사용자 정의 컴포넌트로 교체하려면 먼저 달성하려는 것에 해당하는 범위를 결정하고, 사용 가능한 컴포넌트 목록을 참조한 다음, 그에 따라 [React 컴포넌트를 작성](#building-custom-components)하세요.
+
+## 사용자 정의 컴포넌트 정의하기
+
+Payload가 관리 패널을 컴파일할 때, 구성에서 사용자 정의 컴포넌트를 확인합니다. 감지되면 Payload는 자체 기본 컴포넌트를 귀하의 것으로 교체하거나, 기본적으로 존재하지 않는 경우 귀하의 것을 완전히 렌더링합니다. Payload에서 사용자 정의 컴포넌트가 지원되는 곳은 많지만, 각각은 [컴포넌트 경로](#component-paths)를 사용하여 동일한 방식으로 정의됩니다.
+
+사용자 정의 컴포넌트를 추가하려면 Payload 구성에서 파일 경로를 지정하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+const config = buildConfig({
+  // ...
+  admin: {
+    components: {
+      logout: {
+        Button: '/src/components/Logout#MyComponent', // highlight-line
+      },
+    },
+  },
+})
+```
+
+<Banner type="success">
+  **참고:** 모든 사용자 정의 컴포넌트는 파일 상단의 `'use client'` 지시문의 
+  존재에 따라 서버 컴포넌트 또는 클라이언트 컴포넌트가 될 수 있습니다.
+</Banner>
+
+### 컴포넌트 경로
+
+Payload 구성이 완전히 Node.js 호환 가능하고 가능한 한 가벼우도록 하기 위해, 컴포넌트는 구성에 직접 가져오지 않습니다. 대신, 관리 패널이 자체적으로 해결할 수 있도록 파일 경로로 식별됩니다.
+
+컴포넌트 경로는 기본적으로 프로젝트의 기본 디렉토리에 상대적입니다. 이는 현재 작업 디렉토리이거나 `config.admin.importMap.baseDir`에 지정된 디렉토리입니다.
+
+명명된 내보내기를 사용하는 컴포넌트는 내보내기 이름 뒤에 `#`을 추가하거나 `exportName` 속성을 사용하여 식별됩니다. 컴포넌트가 기본 내보내기인 경우 이를 생략할 수 있습니다.
+
+```ts
+import { buildConfig } from 'payload'
+import { fileURLToPath } from 'node:url'
+import path from 'path'
+const filename = fileURLToPath(import.meta.url)
+const dirname = path.dirname(filename)
+
+const config = buildConfig({
+  // ...
+  admin: {
+    importMap: {
+      baseDir: path.resolve(dirname, 'src'), // highlight-line
+    },
+    components: {
+      logout: {
+        Button: '/components/Logout#MyComponent', // highlight-line
+      },
+    },
+  },
+})
+```
+
+이 예제에서는 기본 디렉토리를 `src` 디렉토리로 설정하고 컴포넌트 경로 문자열에서 `/src/` 부분을 생략했습니다.
+
+### 컴포넌트 구성
+
+사용자 정의 컴포넌트는 일반적으로 문자열로 정의되지만, 추가 옵션이 있는 객체를 전달할 수도 있습니다:
+
+```ts
+import { buildConfig } from 'payload'
+
+const config = buildConfig({
+  // ...
+  admin: {
+    components: {
+      logout: {
+        // highlight-start
+        Button: {
+          path: '/src/components/Logout',
+          exportName: 'MyComponent',
+        },
+        // highlight-end
+      },
+    },
+  },
+})
+```
+
+다음 옵션들을 사용할 수 있습니다:
+
+| 속성          | 설명                                                                                                        |
+| ------------- | ----------------------------------------------------------------------------------------------------------- |
+| `clientProps` | 클라이언트 컴포넌트인 경우 사용자 정의 컴포넌트에 전달될 Props. [자세한 내용](#custom-props).                |
+| `exportName`  | 컴포넌트 경로에서 `#`을 사용하여 명명된 내보내기를 선언하는 대신, `path`에서 생략하고 여기에 전달할 수 있습니다. |
+| `path`        | 사용자 정의 컴포넌트의 파일 경로. 명명된 내보내기는 경로 끝에 `#`으로 구분하여 추가할 수 있습니다.             |
+| `serverProps` | 서버 컴포넌트인 경우 사용자 정의 컴포넌트에 전달될 Props. [자세한 내용](#custom-props).                      |
+
+사용자 정의 컴포넌트를 빌드하는 방법에 대한 자세한 내용은 [사용자 정의 컴포넌트 빌드](#building-custom-components)를 참조하세요.
+
+### 임포트 맵
+
+Payload가 [컴포넌트 경로](#component-paths)를 사용하기 위해 "임포트 맵"이 `src/app/(payload)/admin/importMap.js` 또는 `app/(payload)/admin/importMap.js`에 자동으로 생성됩니다. 이 파일에는 구성의 모든 사용자 정의 컴포넌트가 해당 경로에 키로 연결되어 포함되어 있습니다. Payload가 컴포넌트를 찾아야 할 때 이 파일을 사용하여 올바른 임포트를 찾습니다.
+
+임포트 맵은 시작할 때와 Hot Module Replacement (HMR)가 실행될 때 자동으로 재생성되거나, `payload generate:importmap`을 실행하여 수동으로 재생성할 수 있습니다.
+
+#### 임포트 맵 위치 재정의
+
+`config.admin.importMap.importMapFile` 속성을 사용하여 임포트 맵의 위치를 재정의할 수 있습니다. 이는 임포트 맵을 다른 위치에 배치하거나 사용자 정의 파일 이름을 사용하려는 경우 유용합니다.
+
+```ts
+import { buildConfig } from 'payload'
+import { fileURLToPath } from 'node:url'
+import path from 'path'
+const filename = fileURLToPath(import.meta.url)
+const dirname = path.dirname(filename)
+
+const config = buildConfig({
+  // ...
+  admin: {
+    importMap: {
+      baseDir: path.resolve(dirname, 'src'),
+      importMapFile: path.resolve(
+        dirname,
+        'app',
+        '(payload)',
+        'custom-import-map.js',
+      ), // highlight-line
+    },
+  },
+})
+```
+
+#### 사용자 정의 임포트
+
+필요한 경우, 사용자 정의 항목을 임포트 맵에 추가할 수 있습니다. 이는 주로 알려진 위치에서 참조되지 않는 사용자 정의 임포트를 추가해야 하는 플러그인 제작자에게만 관련이 있습니다.
+
+임포트 맵에 사용자 정의 임포트를 추가하려면 [Payload 구성](../configuration/overview)에서 `admin.dependencies` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  admin: {
+    // ...
+    dependencies: {
+      myTestComponent: {
+        // myTestComponent는 키 - 무엇이든 될 수 있음
+        path: '/components/TestComponent.js#TestComponent',
+        type: 'component',
+        clientProps: {
+          test: 'hello',
+        },
+      },
+    },
+  },
+})
+```
+
+## 사용자 정의 컴포넌트 빌드
+
+Payload의 모든 사용자 정의 컴포넌트는 기본적으로 [React 서버 컴포넌트](https://react.dev/reference/rsc/server-components)입니다. 이는 프론트엔드에서 직접 [로컬 API](../local-api/overview) 사용을 가능하게 하며, 여러 다른 장점이 있습니다.
+
+### 기본 Props
+
+사용자 정의 컴포넌트 빌드를 가능한 한 쉽게 만들기 위해, Payload는 [`payload`](../local-api/overview) 클래스와 [`i18n`](../configuration/i18n) 객체와 같은 일반적인 props를 자동으로 제공합니다. 이는 관리 패널 내에서 사용자 정의 컴포넌트를 빌드할 때 이러한 것들을 직접 가져올 필요가 없다는 것을 의미합니다.
+
+다음은 예제입니다:
+
+```tsx
+import React from 'react'
+import type { Payload } from 'payload'
+
+async function MyServerComponent({
+  payload, // highlight-line
+}: {
+  payload: Payload
+}) {
+  const page = await payload.findByID({
+    collection: 'pages',
+    id: '123',
+  })
+
+  return <p>{page.title}</p>
+}
+```
+
+각 사용자 정의 컴포넌트는 기본적으로 다음 props를 받습니다:
+
+| Prop      | 설명                                     |
+| --------- | ---------------------------------------- |
+| `payload` | [Payload](../local-api/overview) 클래스. |
+| `i18n`    | [i18n](../configuration/i18n) 객체.      |
+
+<Banner type="warning">
+  **참고:** 모든 사용자 정의 컴포넌트는 렌더링되는 컴포넌트에 특정한 다양한 다른 props도 받습니다. 
+  각 컴포넌트당 모든 기본 props의 완전한 목록은 [루트
+  컴포넌트](#root-components), [컬렉션
+  컴포넌트](../configuration/collections#custom-components), [글로벌
+  컴포넌트](../configuration/globals#custom-components), 또는 [필드
+  컴포넌트](../fields/overview#custom-components)를 참조하세요.
+</Banner>
+
+### 사용자 정의 Props
+
+사용자 정의 컴포넌트에 사용자 정의 props를 전달하는 것도 가능합니다. 이를 위해 prop이 [직렬화 가능한지](https://react.dev/reference/rsc/use-client#serializable-types), 그리고 컴포넌트가 서버 또는 클라이언트 컴포넌트인지에 따라 `clientProps` 또는 `serverProps` 속성을 사용할 수 있습니다.
+
+```ts
+import { buildConfig } from 'payload'
+
+const config = buildConfig({
+  // ...
+  admin: {
+    // highlight-line
+    components: {
+      logout: {
+        Button: {
+          path: '/src/components/Logout#MyComponent',
+          clientProps: {
+            myCustomProp: 'Hello, World!', // highlight-line
+          },
+        },
+      },
+    },
+  },
+})
+```
+
+컴포넌트가 이 prop을 받는 방법은 다음과 같습니다:
+
+```tsx
+import React from 'react'
+import { Link } from '@payloadcms/ui'
+
+export function MyComponent({ myCustomProp }: { myCustomProp: string }) {
+  return <Link href="/admin/logout">{myCustomProp}</Link>
+}
+```
+
+### 클라이언트 컴포넌트
+
+Payload의 모든 사용자 정의 컴포넌트는 기본적으로 [React 서버 컴포넌트](https://react.dev/reference/rsc/server-components)이지만, 파일 상단에 `'use client'` 지시문을 간단히 추가하여 [클라이언트 컴포넌트](https://react.dev/reference/rsc/use-client)를 사용하는 것이 가능합니다. Payload는 자동으로 감지하고 컴포넌트를 렌더링하기 전에 모든 [비직렬화 가능한](https://react.dev/reference/rsc/use-client#serializable-types) 기본 props를 제거합니다.
+
+```tsx
+// highlight-start
+'use client'
+// highlight-end
+import React, { useState } from 'react'
+
+export function MyClientComponent() {
+  const [count, setCount] = useState(0)
+
+  return (
+    <button onClick={() => setCount(count + 1)}>Clicked {count} times</button>
+  )
+}
+```
+
+<Banner type="warning">
+  **참고:** 클라이언트 컴포넌트는 [비직렬화 가능한
+  props](https://react.dev/reference/rsc/use-client#serializable-types)를 전달받을 수 없습니다. 
+  서버 컴포넌트 _내부에서_ 클라이언트 컴포넌트를 렌더링하는 경우, 
+  해당 props가 직렬화 가능한지 확인하세요.
+</Banner>
+
+### Payload 구성에 액세스하기
+
+모든 서버 컴포넌트에서 [Payload 구성](../configuration/overview)은 `payload` prop에서 직접 액세스할 수 있습니다:
+
+```tsx
+import React from 'react'
+
+export default async function MyServerComponent({
+  payload: {
+    config, // highlight-line
+  },
+}) {
+  return <Link href={config.serverURL}>Go Home</Link>
+}
+```
+
+하지만 Payload 구성은 의도적으로 [비직렬화 가능합니다](https://react.dev/reference/rsc/use-client#serializable-types). 사용자 정의 검증 함수 등으로 가득 차 있습니다. 이는 Payload 구성이 전체적으로 클라이언트 컴포넌트에 직접 전달될 수 없다는 것을 의미합니다.
+
+이러한 이유로 Payload는 클라이언트 구성을 생성하고 구성 제공자에 전달합니다. 이는 [`useConfig`](../admin/react-hooks#useconfig) 훅을 통해 모든 클라이언트 컴포넌트에서 액세스할 수 있는 Payload 구성의 직렬화 가능한 버전입니다:
+
+```tsx
+'use client'
+import React from 'react'
+import { useConfig } from '@payloadcms/ui'
+
+export function MyClientComponent() {
+  // highlight-start
+  const {
+    config: { serverURL },
+  } = useConfig()
+  // highlight-end
+
+  return <Link href={serverURL}>Go Home</Link>
+}
+```
+
+<Banner type="success">
+  자세한 내용은 [훅 사용하기](#using-hooks)를 참조하세요.
+</Banner>
+
+마찬가지로, 모든 [필드 컴포넌트](../fields/overview#custom-components)는 props를 통해 각각의 필드 구성을 자동으로 받습니다.
+
+서버 컴포넌트 내에서 이 prop의 이름은 `field`입니다:
+
+```tsx
+import React from 'react'
+import type { TextFieldServerComponent } from 'payload'
+
+export const MyClientFieldComponent: TextFieldServerComponent = ({
+  field: { name },
+}) => {
+  return <p>{`This field's name is ${name}`}</p>
+}
+```
+
+클라이언트 컴포넌트 내에서 이 prop의 이름은 비직렬화 가능한 props가 제거되었기 때문에 `clientField`입니다:
+
+```tsx
+'use client'
+import React from 'react'
+import type { TextFieldClientComponent } from 'payload'
+
+export const MyClientFieldComponent: TextFieldClientComponent = ({
+  clientField: { name },
+}) => {
+  return <p>{`This field's name is ${name}`}</p>
+}
+```
+
+### 현재 언어 가져오기
+
+모든 사용자 정의 컴포넌트는 Payload의 [I18n](../configuration/i18n)과 일치하도록 언어 번역을 지원할 수 있습니다. 이를 통해 사용자 정의 컴포넌트가 사용자의 기본 설정에 따라 올바른 언어를 표시할 수 있습니다.
+
+이를 위해 먼저 번역 리소스를 [I18n 구성](../configuration/i18n)에 추가하세요. 그런 다음 모든 서버 컴포넌트에서 `@payloadcms/translations`의 `getTranslation` 함수를 사용하여 리소스를 번역할 수 있습니다.
+
+모든 서버 컴포넌트는 기본적으로 `i18n` 객체를 prop으로 자동으로 받습니다:
+
+```tsx
+import React from 'react'
+import { getTranslation } from '@payloadcms/translations'
+
+export default async function MyServerComponent({ i18n }) {
+  const translatedTitle = getTranslation(myTranslation, i18n) // highlight-line
+
+  return <p>{translatedTitle}</p>
+}
+```
+
+클라이언트 컴포넌트 내에서 이를 수행하는 가장 좋은 방법은 `@payloadcms/ui`에서 `useTranslation` 훅을 가져오는 것입니다:
+
+```tsx
+'use client'
+import React from 'react'
+import { useTranslation } from '@payloadcms/ui'
+
+export function MyClientComponent() {
+  const { t, i18n } = useTranslation() // highlight-line
+
+  return (
+    <ul>
+      <li>{t('namespace1:key', { variable: 'value' })}</li>
+      <li>{t('namespace2:key', { variable: 'value' })}</li>
+      <li>{i18n.language}</li>
+    </ul>
+  )
+}
+```
+
+<Banner type="success">
+  사용 가능한 훅의 전체 목록은 [훅](../admin/react-hooks) 문서를 참조하세요.
+</Banner>
+
+### 현재 로케일 가져오기
+
+모든 [사용자 정의 뷰](./custom-views)는 Payload의 [지역화](../configuration/localization) 기능과 일치하도록 여러 로케일을 지원할 수 있습니다. 이는 API 요청의 범위를 지정하는 등에 사용될 수 있습니다.
+
+모든 서버 컴포넌트는 기본적으로 `locale` 객체를 prop으로 자동으로 받습니다:
+
+```tsx
+import React from 'react'
+
+export default async function MyServerComponent({ payload, locale }) {
+  const localizedPage = await payload.findByID({
+    collection: 'pages',
+    id: '123',
+    locale,
+  })
+
+  return <p>{localizedPage.title}</p>
+}
+```
+
+클라이언트 컴포넌트 내에서 이를 수행하는 가장 좋은 방법은 `@payloadcms/ui`에서 `useLocale` 훅을 가져오는 것입니다:
+
+```tsx
+'use client'
+import React from 'react'
+import { useLocale } from '@payloadcms/ui'
+
+function Greeting() {
+  const locale = useLocale() // highlight-line
+
+  const trans = {
+    en: 'Hello',
+    es: 'Hola',
+  }
+
+  return <span>{trans[locale.code]}</span>
+}
+```
+
+<Banner type="success">
+  사용 가능한 훅의 전체 목록은 [훅](../admin/react-hooks) 문서를 참조하세요.
+</Banner>
+
+### 훅 사용하기
+
+[사용자 정의 컴포넌트를 빌드](#building-custom-components)하기 더 쉽게 만들기 위해, 모든 클라이언트 컴포넌트에서 [Payload의 내장 React 훅](../admin/react-hooks)을 사용할 수 있습니다. 예를 들어, Payload의 많은 React 컨텍스트 중 하나와 상호 작용하고 싶을 수 있습니다. 이를 위해 필요에 따라 사용 가능한 많은 훅 중 하나를 사용할 수 있습니다.
+
+```tsx
+'use client'
+import React from 'react'
+import { useDocumentInfo } from '@payloadcms/ui'
+
+export function MyClientComponent() {
+  const { slug } = useDocumentInfo() // highlight-line
+
+  return <p>{`Entity slug: ${slug}`}</p>
+}
+```
+
+<Banner type="success">
+  사용 가능한 훅의 전체 목록은 [훅](../admin/react-hooks) 문서를 참조하세요.
+</Banner>
+
+### 스타일 추가하기
+
+Payload에는 사용자 정의 컴포넌트의 스타일을 Payload의 내장 스타일링에 맞게 지정할 수 있는 강력한 [CSS 라이브러리](../admin/customizing-css)가 있습니다. 이를 통해 사용자 정의 컴포넌트가 기존 디자인 시스템에 잘 통합되도록 보장합니다. 발생할 수 있는 모든 테마 변경에 자동으로 적응하도록 만들어집니다.
+
+사용자 정의 스타일을 적용하려면 간단히 자체 `.css` 또는 `.scss` 파일을 사용자 정의 컴포넌트에 가져오세요:
+
+```tsx
+import './index.scss'
+
+export function MyComponent() {
+  return <div className="my-component">My Custom Component</div>
+}
+```
+
+그런 다음 사용자 정의 컴포넌트의 배경을 색칠하려면, 예를 들어, 다음 CSS를 사용할 수 있습니다:
+
+```scss
+.my-component {
+  background-color: var(--theme-elevation-500);
+}
+```
+
+Payload는 믹스인 등을 포함한 재사용을 위해 [SCSS](https://sass-lang.com) 라이브러리도 내보냅니다. 이를 사용하려면 `.scss` 파일에 다음과 같이 가져오세요:
+
+```scss
+@import '~@payloadcms/ui/scss';
+
+.my-component {
+  @include mid-break {
+    background-color: var(--theme-elevation-900);
+  }
+}
+```
+
+<Banner type="success">
+  **참고:** Payload 자체 컴포넌트 스타일을 자세히 살펴보거나 글로벌, 앱 전체 CSS를 쉽게 
+  적용할 수도 있습니다. 자세한 내용은 [여기](../admin/customizing-css)에서 확인하세요.
+</Banner>
+
+## 성능
+
+사용자 정의 컴포넌트의 종종 간과되는 측면은 성능입니다. 확인하지 않으면 사용자 정의 컴포넌트로 인해 관리 패널의 로드 시간이 느려지고 결국 사용자 경험이 좋지 않을 수 있습니다.
+
+이는 공개 사이트의 프론트엔드 성능과는 다릅니다.
+
+<Banner type="success">
+  더 많은 성능 팁은 [성능
+  문서](../performance/overview)를 참조하세요.
+</Banner>
+
+### React 및 Next.js 모범 사례 따르기
+
+모든 사용자 정의 컴포넌트는 [React](https://react.dev)를 사용하여 빌드됩니다. 이러한 이유로 React 모범 사례를 따르는 것이 중요합니다. 여기에는 메모화 사용, 스트리밍, 캐싱, 렌더 최적화, 적절한 훅 사용 등이 포함됩니다.
+
+자세한 내용은 [React 문서](https://react.dev/learn)를 참조하세요.
+
+관리 패널 자체는 [Next.js](https://nextjs.org) 애플리케이션입니다. 이러한 이유로 Next.js 모범 사례를 따르는 것도 _또한_ 중요합니다. 여기에는 번들링, 레이아웃과 페이지 사용 시기, 서버/클라이언트 경계를 배치할 위치 등이 포함됩니다.
+
+자세한 내용은 [Next.js 문서](https://nextjs.org/docs)를 참조하세요.
+
+### 초기 HTML 크기 줄이기
+
+서버 컴포넌트를 사용할 때 서버/클라이언트 경계를 통해 전송되는 것에 주의하세요. 모든 props는 직렬화되고 네트워크를 통해 전송됩니다. 너무 많은 데이터가 클라이언트로 전송되면 HTML 크기가 커지고 초기 로드 시간이 느려질 수 있습니다.
+
+이를 최소화하려면 클라이언트로 전송되는 props에 대해 명시적이어야 합니다. 서버 컴포넌트를 선호하고 클라이언트에 필요한 props만 전송하세요. 이는 또한 일부 JS 실행을 서버로 오프셋합니다.
+
+<Banner type="success">
+  **팁:** [React Suspense](https://react.dev/reference/react/Suspense)를 사용하여 
+  점진적으로 컴포넌트를 로드하고 체감 성능을 향상시키세요.
+</Banner>
+
+### 불필요한 재렌더링 방지
+
+컴포넌트를 폼 상태에 구독하는 경우, 필요한 것보다 자주 재렌더링될 수 있습니다.
+
+이를 위해 특정 필드에만 액세스해야 하는 경우 `useFields` 대신 [`useFormFields`](../admin/react-hooks) 훅을 사용하세요.
+
+```ts
+'use client'
+import { useFormFields } from '@payloadcms/ui'
+
+const MyComponent: TextFieldClientComponent = ({ path }) => {
+  const value = useFormFields(([fields, dispatch]) => fields[path])
+  // ...
+}
+```

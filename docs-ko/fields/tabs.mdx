@@ -1,0 +1,100 @@
+---
+title: 탭 필드
+label: 탭
+order: 170
+desc: 탭 필드는 복잡한 편집 환경을 특정 탭 기반 영역으로 구성하는 좋은 방법입니다.
+keywords: 탭, 필드, 구성, 설정, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+탭 필드는 프레젠테이션 전용 필드이며 [관리자 패널](../admin/overview)에만 영향을 미칩니다 (탭에 이름이 지정되지 않은 경우). 이를 사용하여 탭 인터페이스로 특정 하위 필드를 분리하는 멋진 레이아웃 컴포넌트 내에 필드를 배치할 수 있습니다.
+
+<LightDarkImage
+  srcLight="https://payloadcms.com/images/docs/fields/tabs.png"
+  srcDark="https://payloadcms.com/images/docs/fields/tabs-dark.png"
+  alt="Payload 관리자 패널에서 Hero와 Page 레이아웃을 분리하는 데 사용된 탭 필드를 보여줍니다"
+  caption="Hero 필드를 Page Layout에서 분리하는 데 사용된 탭 필드 타입"
+/>
+
+탭 필드를 추가하려면 [필드 Config](./overview)에서 `type`을 `tabs`로 설정하세요:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyTabsField: Field = {
+  // ...
+  // highlight-start
+  type: 'tabs',
+  tabs: [
+    // ...
+  ],
+  // highlight-end
+}
+```
+
+## 구성 옵션
+
+| 옵션          | 설명                                                                     |
+| ------------- | ------------------------------------------------------------------------ |
+| **`tabs`** \* | 이 탭 필드 내에 렌더링할 탭의 배열.                                      |
+| **`admin`**   | 관리자 관련 구성. [자세한 내용](./overview#admin-options).               |
+| **`custom`**  | 커스텀 데이터 추가를 위한 확장 지점 (예: 플러그인용)                     |
+
+### 탭별 구성
+
+각 탭은 `name` 또는 `label` 중 하나와 필수 `fields` 배열을 가져야 합니다. 또한 각 개별 탭 내에 렌더링할 `description`을 선택적으로 전달할 수 있습니다.
+
+| 옵션                | 설명                                                                                                                                                                                                                                                                          |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`name`**          | 데이터베이스에서 저장되고 검색될 때 필드 데이터를 객체로 그룹화합니다. [자세한 내용](/docs/fields/overview#field-names).                                                                                                                                                     |
+| **`label`**         | 탭 자체에 렌더링될 레이블. name이 정의되지 않은 경우 필수이며, 기본값은 name을 단어로 변환한 것입니다.                                                                                                                                                                      |
+| **`fields`** \*     | 이 탭 내에 렌더링할 필드들.                                                                                                                                                                                                                                                   |
+| **`description`**   | 탭 자체의 내용을 설명하기 위해 이 탭 내에 설명을 선택적으로 렌더링합니다.                                                                                                                                                                                                    |
+| **`interfaceName`** | 최상위 레벨의 재사용 가능한 [Typescript 인터페이스](/docs/typescript/generating-types#custom-field-interfaces) 및 [GraphQL 타입](/docs/graphql/graphql-schema#custom-field-schemas)을 생성합니다. (`name`이 있어야 함)                                                   |
+| **`virtual`**       | 데이터베이스에서 필드를 비활성화하려면 `true`를 제공하거나, [필드를 관계와 연결](/docs/fields/relationship#linking-virtual-fields-with-relationships)하기 위해 문자열 경로를 제공합니다. [가상 필드](https://payloadcms.com/blog/learn-how-virtual-fields-can-help-solve-common-cms-challenges) 참조 |
+
+_\* 별표는 필수 속성을 나타냅니다._
+
+## 예제
+
+`collections/ExampleCollection.ts`
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const ExampleCollection: CollectionConfig = {
+  slug: 'example-collection',
+  fields: [
+    {
+      type: 'tabs', // required
+      tabs: [
+        // required
+        {
+          label: 'Tab One Label', // required
+          description: 'This will appear within the tab above the fields.',
+          fields: [
+            // required
+            {
+              name: 'someTextField',
+              type: 'text',
+              required: true,
+            },
+          ],
+        },
+        {
+          name: 'tabTwo',
+          label: 'Tab Two Label', // required
+          interfaceName: 'TabTwo', // optional (`name` must be present)
+          fields: [
+            // required
+            {
+              name: 'numberField', // tabTwo.numberField를 통해 접근 가능
+              type: 'number',
+              required: true,
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}
+```

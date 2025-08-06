@@ -1,0 +1,146 @@
+---
+title: 그룹 필드
+label: 그룹
+order: 90
+desc: 그룹 필드를 사용하면 다른 필드들을 공통 속성 하에 중첩할 수 있습니다. 그룹 필드 사용법, 예제 및 옵션을 알아보세요.
+keywords: 그룹, 필드, 구성, 설정, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+그룹 필드를 사용하면 [필드](./overview)를 공통 속성 이름 하에 중첩할 수 있습니다. 또한 [관리자 패널](../admin/overview)에서 필드들을 시각적으로 그룹화합니다.
+
+<LightDarkImage
+  srcLight="https://payloadcms.com/images/docs/fields/group.png"
+  srcDark="https://payloadcms.com/images/docs/fields/group-dark.png"
+  alt="Payload 관리자 패널의 그룹 필드를 보여줍니다"
+  caption="그룹 필드의 관리자 패널 스크린샷"
+/>
+
+그룹 필드를 추가하려면 [필드 Config](./overview)에서 `type`을 `group`으로 설정하세요:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyGroupField: Field = {
+  // ...
+  // highlight-start
+  type: 'group',
+  fields: [
+    // ...
+  ],
+  // highlight-end
+}
+```
+
+## 구성 옵션
+
+| 옵션                   | 설명                                                                                                                                                                        |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`name`**             | 데이터베이스에 저장되고 검색될 때 속성 이름으로 사용됩니다. [자세한 내용](/docs/fields/overview#field-names).                                                              |
+| **`fields`** \*        | 이 그룹 내에 중첩할 필드 타입 배열.                                                                                                                                         |
+| **`label`**            | 관리자 패널에서 제목으로 사용되고 생성된 GraphQL 타입의 이름을 지정합니다. 정의된 경우 필드 이름이 기본값입니다.                                                           |
+| **`validate`**         | 관리자 패널과 백엔드 모두에서 실행될 커스텀 유효성 검사 함수를 제공합니다. [자세한 내용](/docs/fields/overview#validation).                                                |
+| **`saveToJWT`**        | 이 필드가 최상위 수준이고 [인증](/docs/authentication/overview)을 지원하는 구성에 중첩된 경우 해당 데이터를 사용자 JWT에 포함합니다.                                      |
+| **`hooks`**            | 이 필드에 대한 로직을 제어하기 위해 필드 훅을 제공합니다. [자세한 내용](../hooks/fields).                                                                                    |
+| **`access`**           | 사용자가 이 필드의 데이터로 무엇을 보고 할 수 있는지 나타내는 필드 액세스 제어를 제공합니다. [자세한 내용](../access-control/fields).                                      |
+| **`hidden`**           | 모든 API에서 이 필드의 가시성을 완전히 제한합니다. 데이터베이스에는 여전히 저장되지만 API나 관리자 패널에는 표시되지 않습니다.                                             |
+| **`defaultValue`**     | 이 필드의 기본값으로 사용할 객체 데이터를 제공합니다. [자세한 내용](/docs/fields/overview#default-values).                                                                 |
+| **`localized`**        | 이 필드에 대해 현지화를 활성화합니다. 기본 구성에서 [현지화가 활성화](/docs/configuration/localization)되어야 합니다. 활성화되면 이 그룹 내의 모든 데이터의 별도 현지화된 세트가 유지되므로 각 중첩 필드를 `localized`로 지정할 필요가 없습니다. |
+| **`admin`**            | 관리자 특정 구성. [자세한 내용](#admin-options).                                                                                                                            |
+| **`custom`**           | 커스텀 데이터 추가를 위한 확장 지점 (예: 플러그인용)                                                                                                                        |
+| **`interfaceName`**    | 최상위 수준의 재사용 가능한 [TypeScript 인터페이스](/docs/typescript/generating-types#custom-field-interfaces) 및 [GraphQL 타입](/docs/graphql/graphql-schema#custom-field-schemas) 생성. |
+| **`typescriptSchema`** | JSON 스키마 제공으로 필드 유형 생성을 재정의                                                                                                                                |
+| **`virtual`**          | 데이터베이스에서 필드를 비활성화하려면 `true`를 제공합니다. [가상 필드](https://payloadcms.com/blog/learn-how-virtual-fields-can-help-solve-common-cms-challenges) 참조      |
+
+_\* 별표는 필수 속성을 나타냅니다._
+
+## 관리자 옵션
+
+[관리자 패널](../admin/overview)에서 그룹 필드의 모양과 동작을 커스터마이징하려면 `admin` 옵션을 사용할 수 있습니다:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyGroupField: Field = {
+  // ...
+  admin: {
+    // highlight-line
+    // ...
+  },
+}
+```
+
+그룹 필드는 기본 [필드 관리자 Config](./overview#admin-options)의 모든 기본 관리자 옵션을 상속하며, 다음과 같은 추가 옵션이 있습니다:
+
+| 옵션             | 설명                                                                                                                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`hideGutter`** | 관리자 패널에서 이 필드의 거터를 숨기려면 이 속성을 `true`로 설정하세요. 필드 거터는 세로선과 패딩으로 렌더링되지만, 이 필드가 그룹, 블록 또는 배열 내에 중첩된 경우 거터를 숨기고 싶을 수 있습니다. |
+
+## 예제
+
+`collections/ExampleCollection.ts`
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const ExampleCollection: CollectionConfig = {
+  slug: 'example-collection',
+  fields: [
+    {
+      name: 'pageMeta',
+      type: 'group', // 필수
+      interfaceName: 'Meta', // 선택사항
+      fields: [
+        // 필수
+        {
+          name: 'title',
+          type: 'text',
+          required: true,
+          minLength: 20,
+          maxLength: 100,
+        },
+        {
+          name: 'description',
+          type: 'textarea',
+          required: true,
+          minLength: 40,
+          maxLength: 160,
+        },
+      ],
+    },
+  ],
+}
+```
+
+## 표현 전용 그룹 필드
+
+데이터 구조에 영향을 주지 않고 필드를 시각적으로만 그룹화하기 위해 그룹 필드를 사용할 수도 있습니다. 레이블을 정의하지 않으면 그룹화된 필드만 렌더링됩니다.
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const ExampleCollection: CollectionConfig = {
+  slug: 'example-collection',
+  fields: [
+    {
+      label: '페이지 메타',
+      type: 'group', // 필수
+      fields: [
+        {
+          name: 'title',
+          type: 'text',
+          required: true,
+          minLength: 20,
+          maxLength: 100,
+        },
+        {
+          name: 'description',
+          type: 'textarea',
+          required: true,
+          minLength: 40,
+          maxLength: 160,
+        },
+      ],
+    },
+  ],
+}
+```

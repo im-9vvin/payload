@@ -1,0 +1,188 @@
+---
+title: JSX 변환
+label: JSX 변환
+order: 21
+desc: lexical richtext와 JSX 간의 변환
+keywords: lexical, richtext, jsx
+---
+
+## Richtext를 JSX로 변환
+
+richtext를 JSX로 변환하려면 `@payloadcms/richtext-lexical/react`에서 `RichText` 컴포넌트를 가져와서 richtext 콘텐츠를 전달하세요:
+
+```tsx
+import React from 'react'
+import { RichText } from '@payloadcms/richtext-lexical/react'
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+
+export const MyComponent = ({ data }: { data: SerializedEditorState }) => {
+  return <RichText data={data} />
+}
+```
+
+`RichText` 컴포넌트는 일반적인 Lexical 노드를 위한 내장 변환기를 포함합니다. 커스텀 블록, 커스텀 노드, 또는 필요한 수정 사항에 대해 `converters` prop을 통해 변환기를 추가하거나 재정의할 수 있습니다. 작동 예제는 [웹사이트 템플릿](https://github.com/payloadcms/payload/blob/main/templates/website/src/components/RichText/index.tsx)을 참조하세요.
+
+<Banner type="default">
+  데이터를 가져올 때, `depth` 설정이 업로드와 같은 Lexical 노드를 완전히 채울 수 있을 만큼 충분히 높은지 확인하세요. JSX 변환기는 올바르게 작동하기 위해 완전히 채워진 데이터가 필요합니다.
+</Banner>
+
+### 내부 링크
+
+기본적으로 Payload는 내부 링크의 해당 URL이 무엇인지 모르기 때문에 **내부** 링크를 JSX로 변환하는 방법을 알지 못합니다. 내부 링크가 있는 콘텐츠를 렌더링하려고 할 때 콘솔에 "found internal link, but internalDocToHref is not provided" 오류가 표시되는 것을 알 수 있습니다.
+
+이를 해결하려면 `LinkJSXConverter`에 `internalDocToHref` prop을 전달해야 합니다. 이 prop은 링크 노드를 받아서 문서의 URL을 반환하는 함수입니다.
+
+```tsx
+import type {
+  DefaultNodeTypes,
+  SerializedLinkNode,
+} from '@payloadcms/richtext-lexical'
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+
+import {
+  type JSXConvertersFunction,
+  LinkJSXConverter,
+  RichText,
+} from '@payloadcms/richtext-lexical/react'
+import React from 'react'
+
+const internalDocToHref = ({ linkNode }: { linkNode: SerializedLinkNode }) => {
+  const { relationTo, value } = linkNode.fields.doc!
+  if (typeof value !== 'object') {
+    throw new Error('Expected value to be an object')
+  }
+  const slug = value.slug
+
+  switch (relationTo) {
+    case 'posts':
+      return `/posts/${slug}`
+    case 'categories':
+      return `/category/${slug}`
+    case 'pages':
+      return `/${slug}`
+    default:
+      return `/${relationTo}/${slug}`
+  }
+}
+
+const jsxConverters: JSXConvertersFunction<DefaultNodeTypes> = ({
+  defaultConverters,
+}) => ({
+  ...defaultConverters,
+  ...LinkJSXConverter({ internalDocToHref }),
+})
+
+export const MyComponent: React.FC<{
+  lexicalData: SerializedEditorState
+}> = ({ lexicalData }) => {
+  return <RichText converters={jsxConverters} data={lexicalData} />
+}
+```
+
+### Lexical 블록
+
+rich text에 커스텀 블록이나 인라인 블록이 포함되어 있다면 각 블록의 slug와 일치하는 커스텀 변환기를 제공해야 합니다. Payload는 커스텀 블록을 어떻게 렌더링할지 알지 못하므로 이 변환기는 기본적으로 포함되지 않습니다.
+
+예를 들어:
+
+```tsx
+'use client'
+import type { MyInlineBlock, MyNumberBlock, MyTextBlock } from '@/payload-types'
+import type {
+  DefaultNodeTypes,
+  SerializedBlockNode,
+  SerializedInlineBlockNode,
+} from '@payloadcms/richtext-lexical'
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+
+import {
+  type JSXConvertersFunction,
+  RichText,
+} from '@payloadcms/richtext-lexical/react'
+import React from 'react'
+
+// 완전한 타입 안전성을 위해 기본 노드 타입을 커스텀 블록으로 확장
+type NodeTypes =
+  | DefaultNodeTypes
+  | SerializedBlockNode<MyNumberBlock | MyTextBlock>
+  | SerializedInlineBlockNode<MyInlineBlock>
+
+const jsxConverters: JSXConvertersFunction<NodeTypes> = ({
+  defaultConverters,
+}) => ({
+  ...defaultConverters,
+  blocks: {
+    // 각 키는 블록의 slug와 일치해야 합니다
+    myNumberBlock: ({ node }) => <div>{node.fields.number}</div>,
+    myTextBlock: ({ node }) => (
+      <div style={{ backgroundColor: 'red' }}>{node.fields.text}</div>
+    ),
+  },
+  inlineBlocks: {
+    // 각 키는 인라인 블록의 slug와 일치해야 합니다
+    myInlineBlock: ({ node }) => <span>{node.fields.text}</span>,
+  },
+})
+
+export const MyComponent: React.FC<{
+  lexicalData: SerializedEditorState
+}> = ({ lexicalData }) => {
+  return <RichText converters={jsxConverters} data={lexicalData} />
+}
+```
+
+### 변환기 재정의
+
+노드 타입에 키를 지정한 커스텀 변환기를 `converters` prop / 변환기 함수에 전달하여 기본 JSX 변환기 중 하나를 재정의할 수 있습니다.
+
+예제 - next/image를 사용하도록 업로드 노드 변환기 재정의:
+
+```tsx
+'use client'
+import type {
+  DefaultNodeTypes,
+  SerializedUploadNode,
+} from '@payloadcms/richtext-lexical'
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+
+import {
+  type JSXConvertersFunction,
+  RichText,
+} from '@payloadcms/richtext-lexical/react'
+import Image from 'next/image'
+import React from 'react'
+
+type NodeTypes = DefaultNodeTypes
+
+// next/image를 사용하는 커스텀 업로드 변환기 컴포넌트
+const CustomUploadComponent: React.FC<{
+  node: SerializedUploadNode
+}> = ({ node }) => {
+  if (node.relationTo === 'uploads') {
+    const uploadDoc = node.value
+    if (typeof uploadDoc !== 'object') {
+      return null
+    }
+    const { alt, height, url, width } = uploadDoc
+    return <Image alt={alt} height={height} src={url} width={width} />
+  }
+
+  return null
+}
+
+const jsxConverters: JSXConvertersFunction<NodeTypes> = ({
+  defaultConverters,
+}) => ({
+  ...defaultConverters,
+  // 기본 업로드 변환기 재정의
+  upload: ({ node }) => {
+    return <CustomUploadComponent node={node} />
+  },
+})
+
+export const MyComponent: React.FC<{
+  lexicalData: SerializedEditorState
+}> = ({ lexicalData }) => {
+  return <RichText converters={jsxConverters} data={lexicalData} />
+}
+```

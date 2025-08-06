@@ -1,0 +1,300 @@
+---
+title: 관리자 패널
+label: 개요
+order: 10
+desc: 데이터를 관리하고 자체 React 컴포넌트로 바꾸어 Payload 관리자 패널을 커스터마이징하세요. 뷰, 필드, 스타일 등을 생성, 수정 또는 제거하세요.
+keywords: 관리자, 컴포넌트, 커스텀, 커스터마이징, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+Payload는 사용자와 데이터를 관리하기 위한 아름답고 [완전히 타입 안전한](../typescript/overview) 관리자 패널을 동적으로 생성합니다. 이는 100개 이상의 필드가 있어도 높은 성능을 제공하며 30개 이상의 언어로 번역됩니다. 관리자 패널 내에서 콘텐츠를 관리하고, [사이트를 렌더링](../live-preview/overview)하고, [초안을 미리보기](./preview)하고, [버전을 비교](../versions/overview)하는 등 많은 작업을 할 수 있습니다.
+
+관리자 패널은 [브랜드를 화이트 라벨링](https://payloadcms.com/blog/white-label-admin-ui)하도록 설계되었습니다. 자체 [커스텀 컴포넌트](../custom-components/overview)로 바꾸어 관리자 UI를 끝없이 커스터마이징하고 확장할 수 있습니다—간단한 필드 라벨부터 전체 뷰까지 편집자에게 완벽하게 맞춤화된 인터페이스로 수정하거나 교체할 수 있습니다.
+
+관리자 패널은 [TypeScript](https://www.typescriptlang.org)로 작성되었으며 [Next.js App Router](https://nextjs.org/docs/app)를 사용하여 [React](https://react.dev)로 구축되었습니다. [React 서버 컴포넌트](https://react.dev/reference/rsc/server-components)를 지원하여 프론트엔드에서 [Local API](/docs/local-api/overview)를 사용할 수 있습니다. [기존 Next.js 앱에 한 줄로 Payload를 설치](../getting-started/installation)하고 [어디든 배포](../production/deployment)할 수 있습니다.
+
+<Banner type="success">
+  Payload 관리자 패널은 쉬운 커스터마이징과 제어를 위해 가능한 한 최소화되고
+  직관적으로 설계되었습니다. [자세히
+  알아보기](../custom-components/overview).
+</Banner>
+
+<LightDarkImage
+  srcLight="https://payloadcms.com/images/docs/admin.jpg"
+  srcDark="https://payloadcms.com/images/docs/admin-dark.jpg"
+  alt="접을 수 있는 사이드바가 있는 관리자 패널"
+  caption="기본적으로 열려 있는 접을 수 있는 사이드바를 갖춘 재설계된 관리자 패널로, 더 큰 확장성과 향상된 수평 공간을 제공합니다."
+/>
+
+## 프로젝트 구조
+
+관리자 패널은 Payload의 전체 HTTP 레이어 역할을 하며 앱을 위한 전체 CRUD 인터페이스를 제공합니다. 이는 [REST](../rest-api/overview)와 [GraphQL](../graphql/overview) API가 모두 프론트엔드 애플리케이션과 직접 나란히 존재하는 단순한 [Next.js 라우트](https://nextjs.org/docs/app/building-your-application/routing)임을 의미합니다.
+
+[Payload를 설치](../getting-started/installation)하면 앱에서 다음 파일과 디렉토리가 생성됩니다:
+
+```plaintext
+app
+├─ (payload)
+├── admin
+├─── [[...segments]]
+├──── page.tsx
+├──── not-found.tsx
+├── api
+├─── [...slug]
+├──── route.ts
+├── graphql
+├──── route.ts
+├── graphql-playground
+├──── route.ts
+├── custom.scss
+├── layout.tsx
+```
+
+<Banner type="info">
+  Next.js 프로젝트 구조에 익숙하지 않은 경우 [여기에서 자세히
+  알아볼 수 있습니다](https://nextjs.org/docs/getting-started/project-structure).
+</Banner>
+
+위에서 볼 수 있듯이 모든 Payload 라우트는 `(payload)` 라우트 그룹 내에 중첩되어 있습니다. 이는 모든 레이아웃과 스타일을 범위 지정하여 관리자 패널과 나머지 애플리케이션 사이의 경계를 생성합니다. 예를 들어, 이 디렉토리 내의 `layout.tsx` 파일은 적절한 [`lang`](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/lang) 및 [`dir`](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/dir) 속성 등을 설정하기 위해 Payload가 문서의 `html` 태그를 관리하는 곳입니다.
+
+`admin` 디렉토리는 인터페이스 자체와 관련된 모든 _페이지_를 포함하는 반면, `api` 및 `graphql` 디렉토리는 [REST API](../rest-api/overview) 및 [GraphQL API](../graphql/overview)와 관련된 모든 _라우트_를 포함합니다. 모든 관리자 라우트는 애플리케이션의 정확한 요구 사항에 맞게 [쉽게 구성 가능](#customizing-routes)합니다.
+
+<Banner type="warning">
+  **참고:** 관리자 패널, [REST
+  API](../rest-api/overview), 또는 [GraphQL API](../graphql/overview)를
+  사용할 의도가 없다면 Next.js 앱 내의 해당 디렉토리를 삭제하여 선택
+  해제할 수 있습니다. 그러나 오버헤드는 완전히 이러한 라우트로 제한되며
+  사용하지 않을 때 외부에서 Payload를 느리게 하거나 영향을 주지 않습니다.
+</Banner>
+
+마지막으로 `custom.scss` 파일은 색상 팔레트 수정과 같이 관리자 패널에서 전체적으로 지향된 스타일을 추가하거나 재정의할 수 있는 곳입니다. CSS만으로 모양과 느낌을 커스터마이징하는 것은 관리자 패널의 강력한 기능입니다. [여기에서 자세히 알아보기](./customizing-css).
+
+모든 자동 생성된 파일은 각 파일의 상단에 다음 주석을 포함합니다:
+
+```tsx
+/* THIS FILE WAS GENERATED AUTOMATICALLY BY PAYLOAD. */,
+/* DO NOT MODIFY IT BECAUSE IT COULD BE REWRITTEN AT ANY TIME. */
+```
+
+## 관리자 옵션
+
+관리자 패널의 모든 루트 수준 옵션은 `admin` 속성 하에 [Payload Config](../configuration/overview)에서 정의됩니다:
+
+```ts
+import { buildConfig } from 'payload'
+
+const config = buildConfig({
+  // ...
+  // highlight-start
+  admin: {
+    // ...
+  },
+  // highlight-end
+})
+```
+
+다음 옵션들을 사용할 수 있습니다:
+
+| 옵션                       | 설명                                                                                                                                      |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `avatar`                   | 계정 프로필 사진을 설정합니다. 옵션: `gravatar`, `default` 또는 커스텀 React 컴포넌트.                                                  |
+| `autoLogin`                | 개발 및 데모 편의를 위한 자동 로그인에 사용됩니다. [자세한 내용](../authentication/overview).                                           |
+| `components`               | 관리자 패널 전체에 영향을 미치는 컴포넌트 재정의. [자세한 내용](../custom-components/overview).                                         |
+| `custom`                   | 관리자 패널에 전달하고자 하는 모든 커스텀 속성.                                                                                           |
+| `dateFormat`               | 관리자 패널 내의 모든 날짜에 사용될 날짜 형식. 모든 유효한 [date-fns](https://date-fns.org/) 형식 패턴을 사용할 수 있습니다.           |
+| `livePreview`              | 프론트엔드 애플리케이션의 즉각적인 시각적 피드백을 위한 실시간 편집을 활성화합니다. [자세한 내용](../live-preview/overview).            |
+| `meta`                     | 관리자 패널에 사용할 기본 메타데이터. [자세한 내용](./metadata).                                                                         |
+| `routes`                   | 내장 관리자 패널 라우트를 자체 커스텀 라우트로 교체합니다. [자세한 내용](#customizing-routes).                                          |
+| `suppressHydrationWarning` | `true`로 설정하면 루트 `<html>` 태그의 hydration 중에 React hydration 불일치 경고를 억제합니다. 기본값은 `false`입니다.               |
+| `theme`                    | 관리자 패널 테마를 선택한 것만 사용하도록 제한합니다. 기본값은 `all`입니다.                                                              |
+| `timezones`                | 관리자 패널의 시간대 설정을 구성합니다. [자세한 내용](#timezones)                                                                        |
+| `user`                     | 관리자 패널에 로그인하도록 허용하려는 컬렉션의 `slug`. [자세한 내용](#the-admin-user-collection).                                      |
+
+<Banner type="success">
+  **참고:** 이것들은 관리자 패널의 _루트 수준_ 옵션입니다. [컬렉션 관리자
+  옵션](../configuration/collections#admin-options)과 [글로벌 관리자
+  옵션](../configuration/globals#admin-options)도 각각의 `admin` 키를 통해
+  커스터마이징할 수 있습니다.
+</Banner>
+
+### 관리자 사용자 컬렉션
+
+관리자 패널에 로그인하도록 허용할 컬렉션을 지정하려면 인증 활성화된 컬렉션의 slug와 같은 `admin.user` 키를 전달하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+const config = buildConfig({
+  // ...
+  admin: {
+    user: 'admins', // highlight-line
+  },
+})
+```
+
+<Banner type="warning">
+  **중요:**
+
+관리자 패널은 단일 인증 활성화 컬렉션만 사용할 수 있습니다. 컬렉션에 대한 인증을 활성화하려면 컬렉션 구성에서 간단히 `auth: true`를 설정하세요. 자세한 내용은 [인증](../authentication/overview)을 참조하세요.
+
+</Banner>
+
+기본적으로 컬렉션을 지정하지 않은 경우 Payload는 관리자 패널에 액세스할 수 있는 `User` 컬렉션을 자동으로 제공합니다. `slug: 'users'`로 자체 컬렉션을 추가하여 기본 `User` 컬렉션의 필드와 설정을 커스터마이징하거나 재정의할 수 있습니다. 이렇게 하면 Payload가 기본 버전 대신 제공된 `User` 컬렉션을 사용하도록 강제됩니다.
+
+컬렉션이 [인증](/docs/authentication/overview)을 지원하는 한 관리자 패널에 액세스하는 데 원하는 컬렉션을 사용할 수 있습니다. `users`라고 불릴 필요가 없습니다. 예를 들어, 인증을 모두 지원하는 두 개의 컬렉션을 가지고 싶을 수 있습니다:
+
+- `admins` - 데이터를 관리하고 관리자 패널에 액세스할 수 있는 더 높은 수준의 권한을 가지도록 의도된 것
+- `customers` - 관리자 패널에 로그인하도록 허용되지 않아야 하는 앱의 최종 사용자를 위한 것
+
+이를 위해 구성에서 `admin: { user: 'admins' }`를 지정하세요. 이렇게 하면 `admins`에게만 관리자 패널에 대한 액세스를 제공합니다. `customers`로 인증된 모든 사용자는 관리자 패널에 액세스하는 것이 방지됩니다. 자세한 내용은 [접근 제어](/docs/access-control/overview)를 참조하세요.
+
+### 역할 기반 접근 제어
+
+역할 기반 접근 제어(RBAC)라고 알려진 제한된 권한으로 여러 사용자 유형을 관리자 패널에 허용하는 것도 가능합니다. 예를 들어, `admins` 컬렉션 내에서 두 가지 역할을 가지고 싶을 수 있습니다:
+
+- `super-admin` - 모든 작업을 수행할 수 있는 관리자 패널에 대한 전체 액세스
+- `editor` - 콘텐츠만 관리할 수 있는 관리자 패널에 대한 제한된 액세스
+
+이를 위해 인증 활성화 컬렉션에 `roles` 또는 유사한 필드를 추가한 다음 `access.admin` 속성을 사용하여 해당 필드의 값에 따라 액세스를 허용하거나 거부하세요. 자세한 내용은 [접근 제어](/docs/access-control/overview)를 참조하세요. 역할 기반 접근 제어의 완전하고 작동하는 예제는 공식 [Auth Example](https://github.com/payloadcms/payload/tree/main/examples/auth)을 확인하세요.
+
+## 라우트 커스터마이징
+
+Payload가 자체를 바인딩하는 라우트를 완전히 제어할 수 있습니다. 여기에는 [REST API](../rest-api/overview)와 같은 [루트 수준 라우트](#root-level-routes)와 사용자 계정 페이지와 같은 [관리자 수준 라우트](#admin-level-routes)가 모두 포함됩니다. 구성에서 원하는 경로를 지정하기만 하면 애플리케이션의 요구에 맞게 이러한 라우트를 커스터마이징할 수 있습니다.
+
+### 루트 수준 라우트
+
+루트 수준 라우트는 [REST API](../rest-api/overview)와 [GraphQL API](../graphql/overview) 또는 관리자 패널 자체의 루트 경로와 같이 `/admin` 경로 뒤에 있지 않은 것들입니다.
+
+루트 수준 라우트를 커스터마이징하려면 [Payload Config](../configuration/overview)에서 `routes` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+const config = buildConfig({
+  // ...
+  routes: {
+    admin: '/custom-admin-route', // highlight-line
+  },
+})
+```
+
+다음 옵션들을 사용할 수 있습니다:
+
+| 옵션                | 기본 라우트           | 설명                                          |
+| ------------------- | --------------------- | --------------------------------------------- |
+| `admin`             | `/admin`              | 관리자 패널 자체.                             |
+| `api`               | `/api`                | [REST API](../rest-api/overview) 기본 경로.   |
+| `graphQL`           | `/graphql`            | [GraphQL API](../graphql/overview) 기본 경로. |
+| `graphQLPlayground` | `/graphql-playground` | GraphQL Playground.                           |
+
+<Banner type="warning">
+  **중요:** 루트 수준 라우트 변경은 새 라우트와 일치하도록 [프로젝트
+  구조](#project-structure) 변경도 필요합니다. [자세한
+  내용](#customizing-root-level-routes).
+</Banner>
+
+<Banner type="success">
+  **팁:** [커스텀
+  엔드포인트](../rest-api/overview#custom-endpoints)와 [커스텀
+  뷰](../custom-components/custom-views)를 통해 관리자 패널에 _새로운_
+  라우트를 쉽게 추가할 수 있습니다.
+</Banner>
+
+#### 루트 수준 라우트 커스터마이징
+
+애플리케이션의 루트에 관리자 패널을 마운트하는 것과 같이 필요에 따라 루트 수준 라우트를 변경할 수 있습니다.
+
+그러나 이 변경은 새 라우트와 일치하도록 [프로젝트 구조](#project-structure) 변경도 필요합니다.
+
+예를 들어, `routes.admin`을 `/`로 설정하는 경우:
+
+```ts
+import { buildConfig } from 'payload'
+
+const config = buildConfig({
+  // ...
+  routes: {
+    admin: '/', // highlight-line
+  },
+})
+```
+
+그러면 프로젝트 구조에서 `admin` 디렉토리를 완전히 제거해야 합니다:
+
+```plaintext
+app
+├─ (payload)
+├── [[...segments]]
+├──── ...
+├── layout.tsx
+```
+
+<Banner type="warning">
+  **참고:** `create-payload-app`을 통해 관리자 패널을 자동 생성하기 _전에_
+  루트 수준 라우트를 설정하면 [프로젝트 구조](#project-structure)가 이미
+  올바르게 설정됩니다.
+</Banner>
+
+### 관리자 수준 라우트
+
+관리자 수준 라우트는 `/admin` 경로 뒤에 있는 것들입니다. 이것들은 사용자의 계정 페이지, 로그인 페이지 등과 같이 관리자 패널 자체의 일부인 라우트입니다.
+
+관리자 수준 라우트를 커스터마이징하려면 [Payload Config](../configuration/overview)에서 `admin.routes` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+const config = buildConfig({
+  // ...
+  admin: {
+    routes: {
+      account: '/my-account', // highlight-line
+    },
+  },
+})
+```
+
+다음 옵션들을 사용할 수 있습니다:
+
+| 옵션              | 기본 라우트          | 설명                        |
+| ----------------- | -------------------- | --------------------------- |
+| `account`         | `/account`           | 사용자의 계정 페이지.       |
+| `createFirstUser` | `/create-first-user` | 첫 번째 사용자 생성 페이지. |
+| `forgot`          | `/forgot`            | 비밀번호 재설정 페이지.     |
+| `inactivity`      | `/logout-inactivity` | 비활성 후 리디렉션 페이지.  |
+| `login`           | `/login`             | 로그인 페이지.              |
+| `logout`          | `/logout`            | 로그아웃 페이지.            |
+| `reset`           | `/reset`             | 비밀번호 재설정 페이지.     |
+| `unauthorized`    | `/unauthorized`      | 권한 없음 페이지.           |
+
+<Banner type="success">
+  **참고:** Payload Config의 `admin.views` 속성을 사용하여 전체 _뷰_를
+  자체 것으로 바꿀 수도 있습니다. 자세한 내용은 [커스텀
+  뷰](../custom-components/custom-views)를 참조하세요.
+</Banner>
+
+## 국제화 (I18n)
+
+Payload 관리자 패널은 [30개 이상의 언어로 번역](https://github.com/payloadcms/payload/tree/main/packages/translations)됩니다. 언어는 사용자의 브라우저를 기반으로 자동으로 감지되고 관리자 패널에서 해당 언어로 모든 텍스트를 표시하는 데 사용됩니다. 언어가 감지되지 않았거나 사용자의 언어가 아직 지원되지 않는 경우 영어가 선택됩니다. 사용자는 계정 페이지에서 하나를 선택하여 쉽게 언어를 지정할 수 있습니다. 자세한 내용은 [I18n](../configuration/i18n)을 참조하세요.
+
+## 라이트 및 다크 모드
+
+관리자 패널의 사용자는 편집 경험을 위해 라이트 모드와 다크 모드 중에서 선택할 수 있습니다. 사용자는 계정 페이지에서 선호하는 테마를 선택할 수 있습니다. 선택하면 사용자의 기본 설정에 저장되고 세션과 기기에 걸쳐 지속됩니다. 테마가 선택되지 않은 경우 관리자 패널은 운영 체제의 테마를 자동으로 감지하고 이를 기본값으로 사용합니다.
+
+## 시간대
+
+`admin.timezones` 구성을 통해 관리자 패널의 시간대 설정을 구성할 수 있습니다. 사용 가능한 시간대 목록을 커스터마이징하고 향후에는 관리자 패널과 모든 사용자에 대한 기본 시간대를 구성할 수 있습니다.
+
+다음 옵션들을 사용할 수 있습니다:
+
+| 옵션                 | 설명                                                                                            |
+| -------------------- | ----------------------------------------------------------------------------------------------- |
+| `supportedTimezones` | 값이 IANA 이름인 선택 가능한 시간대의 라벨/값 옵션 배열 (예: `America/Detroit`)                |
+| `defaultTimezone`    | 기본 선택된 시간대의 `value` (예: `America/Los_Angeles`)                                       |
+
+지원되는 시간대 배열은 Intl API를 통해 지원되는 IANA 시간대 목록, 특히 `Intl.supportedValuesOf('timeZone')`에 대해 값을 확인하여 검증합니다.
+
+<Banner type="info">
+  **중요** `timezone: true`를 통해 각 개별 날짜 필드에서 시간대를
+  활성화해야 합니다. 자세한 내용은 [날짜 필드](../fields/overview#date)를
+  참조하세요.
+</Banner>

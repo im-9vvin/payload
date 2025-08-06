@@ -1,0 +1,184 @@
+---
+title: 코드 필드
+label: 코드
+order: 50
+desc: 코드 필드 타입은 데이터베이스에 문자열을 저장합니다. 코드 필드 사용법, 예제 및 옵션을 알아보세요.
+
+keywords: 코드, 필드, 구성, 설정, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+코드 필드는 데이터베이스에 문자열을 저장하지만 [관리자 패널](../admin/overview)에 코드 편집기 스타일의 인터페이스를 제공합니다.
+
+<LightDarkImage
+  srcLight="https://payloadcms.com/images/docs/fields/code.png"
+  srcDark="https://payloadcms.com/images/docs/fields/code-dark.png"
+  alt="Payload 관리자 패널의 코드 필드를 보여줍니다"
+  caption="이 필드는 `monaco-react` 편집기 구문 강조 표시를 사용하고 있습니다."
+/>
+
+코드 필드를 추가하려면 [필드 Config](./overview)에서 `type`을 `code`로 설정하세요:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyBlocksField: Field = {
+  // ...
+  type: 'code', // highlight-line
+}
+```
+
+## 구성 옵션
+
+| 옵션                   | 설명                                                                                                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`name`** \*          | 데이터베이스에 저장되고 검색될 때 속성 이름으로 사용됩니다. [자세한 내용](/docs/fields/overview#field-names).                                                            |
+| **`label`**            | 관리자 패널에서 필드 레이블로 사용되는 텍스트 또는 각 언어의 키가 있는 객체.                                                                                              |
+| **`unique`**           | 컬렉션의 각 항목이 이 필드에 대해 고유한 값을 갖도록 강제합니다.                                                                                                          |
+| **`index`**            | 더 빠른 쿼리를 생성하기 위해 이 필드에 대한 [인덱스](../database/indexes)를 구축합니다. 사용자가 이 필드의 데이터에 대해 자주 쿼리를 수행하는 경우 이 필드를 `true`로 설정하세요. |
+| **`minLength`**        | 기본 유효성 검사 함수에서 값이 최소 문자 길이인지 확인하는 데 사용됩니다.                                                                                                 |
+| **`maxLength`**        | 기본 유효성 검사 함수에서 값이 최대 문자 길이인지 확인하는 데 사용됩니다.                                                                                                 |
+| **`validate`**         | 관리자 패널과 백엔드 모두에서 실행될 커스텀 유효성 검사 함수를 제공합니다. [자세한 내용](/docs/fields/overview#validation).                                              |
+| **`saveToJWT`**        | 이 필드가 최상위 수준이고 [인증](/docs/authentication/overview)을 지원하는 구성에 중첩된 경우 해당 데이터를 사용자 JWT에 포함합니다.                                    |
+| **`hooks`**            | 이 필드에 대한 로직을 제어하기 위해 필드 훅을 제공합니다. [자세한 내용](../hooks/fields).                                                                                  |
+| **`access`**           | 사용자가 이 필드의 데이터로 무엇을 보고 할 수 있는지 나타내는 필드 액세스 제어를 제공합니다. [자세한 내용](../access-control/fields).                                    |
+| **`hidden`**           | 모든 API에서 이 필드의 가시성을 완전히 제한합니다. 데이터베이스에는 여전히 저장되지만 API나 관리자 패널에는 표시되지 않습니다.                                           |
+| **`defaultValue`**     | 이 필드의 기본값으로 사용할 데이터를 제공합니다. [자세한 내용](/docs/fields/overview#default-values).                                                                    |
+| **`localized`**        | 이 필드에 대해 현지화를 활성화합니다. 기본 구성에서 [현지화가 활성화](/docs/configuration/localization)되어야 합니다.                                                    |
+| **`required`**         | 이 필드에 값이 있어야 합니다.                                                                                                                                             |
+| **`admin`**            | 관리자 특정 구성. [자세한 내용](#admin-options)은 아래를 참조하세요.                                                                                                      |
+| **`custom`**           | 커스텀 데이터 추가를 위한 확장 지점 (예: 플러그인용)                                                                                                                      |
+| **`typescriptSchema`** | JSON 스키마 제공으로 필드 유형 생성을 재정의                                                                                                                              |
+| **`virtual`**          | 데이터베이스에서 필드를 비활성화하려면 `true`를 제공하거나 [관계와 필드를 연결](/docs/fields/relationship#linking-virtual-fields-with-relationships)하기 위해 문자열 경로를 제공합니다. [가상 필드](https://payloadcms.com/blog/learn-how-virtual-fields-can-help-solve-common-cms-challenges) 참조 |
+
+_\* 별표는 필수 속성을 나타냅니다._
+
+## 관리자 옵션
+
+[관리자 패널](../admin/overview)에서 코드 필드의 모양과 동작을 커스터마이징하려면 `admin` 옵션을 사용할 수 있습니다:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyCodeField: Field = {
+  // ...
+  admin: {
+    // highlight-line
+    // ...
+  },
+}
+```
+
+코드 필드는 기본 [필드 관리자 Config](./overview#admin-options)의 모든 기본 관리자 옵션을 상속하며, 다음과 같은 추가 옵션이 있습니다:
+
+| 옵션                | 설명                                                                                                                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`language`**      | 이 속성은 [여기](https://github.com/microsoft/monaco-editor/tree/main/src/basic-languages)에 나열된 언어로 설정할 수 있습니다.                                                            |
+| **`editorOptions`** | monaco 편집기에 전달할 수 있는 옵션, [전체 목록 보기](https://microsoft.github.io/monaco-editor/typedoc/interfaces/editor.IDiffEditorConstructionOptions.html).                          |
+
+## 예제
+
+`collections/ExampleCollection.ts
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const ExampleCollection: CollectionConfig = {
+  slug: 'example-collection',
+  fields: [
+    {
+      name: 'trackingCode', // 필수
+      type: 'code', // 필수
+      required: true,
+      admin: {
+        language: 'javascript',
+      },
+    },
+  ],
+}
+```
+
+## 커스텀 컴포넌트
+
+### 필드
+
+#### 서버 컴포넌트
+
+```tsx
+import type React from 'react'
+import { CodeField } from '@payloadcms/ui'
+import type { CodeFieldServerComponent } from 'payload'
+
+export const CustomCodeFieldServer: CodeFieldServerComponent = ({
+  clientField,
+  path,
+  schemaPath,
+  permissions,
+}) => {
+  return (
+    <CodeField
+      field={clientField}
+      path={path}
+      schemaPath={schemaPath}
+      permissions={permissions}
+    />
+  )
+}
+```
+
+#### 클라이언트 컴포넌트
+
+```tsx
+'use client'
+import React from 'react'
+import { CodeField } from '@payloadcms/ui'
+import type { CodeFieldClientComponent } from 'payload'
+
+export const CustomCodeFieldClient: CodeFieldClientComponent = (props) => {
+  return <CodeField {...props} />
+}
+```
+
+### 레이블
+
+#### 서버 컴포넌트
+
+```tsx
+import React from 'react'
+import { FieldLabel } from '@payloadcms/ui'
+import type { CodeFieldLabelServerComponent } from 'payload'
+
+export const CustomCodeFieldLabelServer: CodeFieldLabelServerComponent = ({
+  clientField,
+  path,
+}) => {
+  return (
+    <FieldLabel
+      label={clientField?.label || clientField?.name}
+      path={path}
+      required={clientField?.required}
+    />
+  )
+}
+```
+
+#### 클라이언트 컴포넌트
+
+```tsx
+'use client'
+import React from 'react'
+import { FieldLabel } from '@payloadcms/ui'
+import type { CodeFieldLabelClientComponent } from 'payload'
+
+export const CustomCodeFieldLabelClient: CodeFieldLabelClientComponent = ({
+  field,
+  path,
+}) => {
+  return (
+    <FieldLabel
+      label={field?.label || field?.name}
+      path={path}
+      required={field?.required}
+    />
+  )
+}
+```

@@ -1,0 +1,86 @@
+---
+title: GraphQL Schema
+label: GraphQL Schema
+order: 30
+desc: collections과 globals를 기반으로 한 자신만의 GraphQL schema를 파일로 출력하세요.
+keywords: headless cms, typescript, documentation, Content Management System, cms, headless, javascript, node, react, nextjs
+---
+
+Payload에서 스키마는 collections과 globals에 의해 제어됩니다. generate 명령을 실행하기만 하면 전체 스키마가 생성됩니다.
+
+## Schema generation script
+
+`@payloadcms/graphql`을 dev dependency로 설치하세요:
+
+```bash
+pnpm add @payloadcms/graphql -D
+```
+
+다음 명령을 실행하여 스키마를 생성하세요:
+
+```bash
+pnpm payload-graphql generate:schema
+```
+
+## Custom Field Schemas
+
+`array`, `block`, `group` 및 이름이 지정된 `tab` 필드의 경우, 최상위 수준의 재사용 가능한 인터페이스를 생성할 수 있습니다. 다음 group field config:
+
+```ts
+{
+  type: 'group',
+  name: 'meta',
+  interfaceName: 'SharedMeta', // highlight-line
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+    },
+    {
+      name: 'description',
+      type: 'text',
+    },
+  ],
+}
+```
+
+는 다음을 생성합니다:
+
+```ts
+// 최상위 수준의 재사용 가능한 타입이 생성됩니다
+type SharedMeta {
+  title: String
+  description: String
+}
+
+// 그리고 생성된 스키마 내에서 참조됩니다
+type Collection1 {
+  // ...other fields
+  meta: SharedMeta
+}
+```
+
+위 예제는 모든 정의를 Payload config에서 상대적인 파일로 `./graphql/schema.graphql`에 출력합니다. 기본적으로 파일은 현재 작업 디렉토리에 `schema.graphql`로 출력됩니다.### npm script 추가하기
+
+<Banner type="warning">
+  **중요**
+
+Payload는 GraphQL 스키마를 생성하기 위해 config를 찾을 수 있어야 합니다.
+
+</Banner>
+
+Payload는 자동으로 config를 찾으려고 시도하지만 항상 찾을 수 있는 것은 아닙니다. 예를 들어, `/src` 디렉토리나 유사한 곳에서 작업하는 경우 환경 변수를 사용하여 Payload에 config를 찾을 위치를 수동으로 알려줘야 합니다.
+
+이것이 해당하는 경우, 타입 생성을 더 쉽게 하기 위해 npm script를 만드세요:
+
+```json
+// package.json
+
+{
+  "scripts": {
+    "generate:graphQLSchema": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload-graphql generate:schema"
+  }
+}
+```
+
+이제 `pnpm generate:graphQLSchema`를 실행하여 쉽게 스키마를 생성할 수 있습니다.

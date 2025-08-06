@@ -1,0 +1,96 @@
+---
+title: 접을 수 있는 필드
+label: 접을 수 있는 필드
+order: 60
+desc: 접을 수 있는 필드를 사용하면 접거나 펼칠 수 있는 접을 수 있는 레이아웃 컴포넌트 내에 필드를 배치할 수 있습니다.
+keywords: 행, 필드, 구성, 설정, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+접을 수 있는 필드는 표현 전용이며 관리자 패널에만 영향을 줍니다. 이를 사용하여 접거나 펼칠 수 있는 멋진 레이아웃 컴포넌트 내에 필드를 배치할 수 있습니다.
+
+<LightDarkImage
+  srcLight="https://payloadcms.com/images/docs/fields/collapsible.png"
+  srcDark="https://payloadcms.com/images/docs/fields/collapsible-dark.png"
+  alt="Payload 관리자 패널의 접을 수 있는 필드를 보여줍니다"
+  caption="접을 수 있는 필드의 관리자 패널 스크린샷"
+/>
+
+접을 수 있는 필드를 추가하려면 [필드 Config](./overview)에서 `type`을 `collapsible`로 설정하세요:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyCollapsibleField: Field = {
+  // ...
+  // highlight-start
+  type: 'collapsible',
+  fields: [
+    // ...
+  ],
+  // highlight-end
+}
+```
+
+## 구성 옵션
+
+| 옵션            | 설명                                                                                                                                                                              |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`label`** \*  | 접을 수 있는 컴포넌트의 헤더 내에서 렌더링할 레이블. 이는 문자열, 함수 또는 React 컴포넌트일 수 있습니다. 함수/컴포넌트는 인수로 `({ data, path })`를 받습니다.                       |
+| **`fields`** \* | 이 접을 수 있는 필드 내에 중첩할 필드 타입 배열.                                                                                                                                   |
+| **`admin`**     | 관리자 특정 구성. [자세한 내용](#admin-options).                                                                                                                                  |
+| **`custom`**    | 커스텀 데이터 추가를 위한 확장 지점 (예: 플러그인용)                                                                                                                               |
+
+_\* 별표는 필수 속성을 나타냅니다._
+
+## 관리자 옵션
+
+[관리자 패널](../admin/overview)에서 접을 수 있는 필드의 모양과 동작을 커스터마이징하려면 `admin` 옵션을 사용할 수 있습니다:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyCollapsibleField: Field = {
+  // ...
+  admin: {
+    // highlight-line
+    // ...
+  },
+}
+```
+
+접을 수 있는 필드는 기본 [필드 관리자 Config](./overview#admin-options)의 모든 기본 관리자 옵션을 상속하며, 다음과 같은 추가 옵션이 있습니다:
+
+| 옵션                | 설명                     |
+| ------------------- | ------------------------ |
+| **`initCollapsed`** | 초기 축소 상태 설정      |
+
+## 예제
+
+`collections/ExampleCollection.ts`
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const ExampleCollection: CollectionConfig = {
+  slug: 'example-collection',
+  fields: [
+    {
+      label: ({ data }) => data?.title || '제목 없음',
+      type: 'collapsible', // 필수
+      fields: [
+        // 필수
+        {
+          name: 'title',
+          type: 'text',
+          required: true,
+        },
+        {
+          name: 'someTextField',
+          type: 'text',
+          required: true,
+        },
+      ],
+    },
+  ],
+}
+```

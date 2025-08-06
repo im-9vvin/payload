@@ -1,0 +1,90 @@
+---
+title: CSS & SCSS 커스터마이징
+label: CSS 커스터마이징
+order: 50
+desc: 구성에 자체 CSS 또는 SCSS 스타일 시트를 추가하여 Payload 관리자 패널을 더욱 커스터마이징하세요. 강력한 테마 및 디자인 옵션이 여러분을 기다리고 있습니다.
+keywords: 관리자, css, scss, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+CSS만으로 Payload [관리자 패널](./overview)을 커스터마이징하는 것은 대시보드의 모양과 느낌을 커스터마이징하는 가장 쉽고 강력한 방법 중 하나입니다. 이러한 수준의 커스터마이징을 허용하기 위해 Payload는:
+
+1. 커스텀 선택자를 주입할 수 있는 [루트 수준 스타일시트](#global-css)를 노출합니다
+1. 쉽게 재정의하거나 확장할 수 있는 [CSS 라이브러리](#css-library)를 제공합니다
+1. 클래스 이름이 전역적으로 접근 가능하도록 [BEM 명명 규칙](http://getbem.com)을 사용합니다
+
+관리자 UI 내에서 CSS를 커스터마이징하려면 만들고자 하는 범위와 변경 사항을 결정한 다음 필요에 따라 구성에 자체 CSS 또는 SCSS를 추가하세요.
+
+## 글로벌 CSS
+
+글로벌 CSS는 전체 [관리자 패널](./overview)에 적용되는 CSS를 의미합니다. 여기서 몇 줄의 코드만으로도 관리자 UI의 모양과 느낌에 상당한 영향을 미칠 수 있습니다.
+
+앱의 루트 `custom.scss` 파일을 통해 자체 글로벌 CSS를 추가할 수 있습니다. 이 파일은 관리자 패널의 루트에 로드되며 필요에 따라 커스텀 선택자나 스타일을 주입하는 데 사용할 수 있습니다.
+
+다음은 대시보드 뷰를 대상으로 하고 배경색을 변경하는 방법의 예입니다:
+
+```scss
+.dashboard {
+  background-color: red; // highlight-line
+}
+```
+
+<Banner type="warning">
+  **참고:** [커스텀
+  컴포넌트](../custom-components/overview)를 구축하는 경우 글로벌
+  스타일시트를 사용하기보다는 자체 스타일시트를 컴포넌트에 직접 가져오는
+  것이 가장 좋습니다. 필요에 따라 [CSS 라이브러리](#css-library)를 계속
+  사용할 수 있습니다.
+</Banner>
+
+### 특이성 규칙
+
+모든 Payload CSS는 `@layer payload-default` 하의 CSS 레이어 내에서 캡슐화됩니다. 모든 커스텀 css는 이제 가능한 가장 높은 특이성을 갖게 됩니다.
+
+또한 레이어를 사용하고 스타일이 payload 이후에 적용되도록 하려면 `@layer payload` 레이어도 제공했습니다.
+
+이전 특이성 규칙이 존중되는 방식으로 기존 스타일을 재정의하려면 다음과 같이 기본 레이어를 사용할 수 있습니다:
+
+```css
+@layer payload-default {
+  // Payload 특이성 내의 내 스타일
+}
+```
+
+## Payload SCSS 변수 및 유틸리티 재사용
+
+UI 패키지에서 가져와서 자체 스타일시트에서 Payload의 SCSS 변수와 유틸리티를 재사용할 수 있습니다.
+
+```scss
+@import '~@payloadcms/ui/scss';
+```
+
+## CSS 라이브러리
+
+기본 스타일을 가능한 한 쉽게 재정의할 수 있도록 Payload는 관리자 UI 내의 모든 CSS에 대해 [BEM 명명 규칙](http://getbem.com/)을 사용합니다. 자체 CSS를 제공하면 중첩된 컴포넌트와 다양한 컴포넌트 상태를 대상으로 하는 것을 포함하여 모든 내장 스타일을 쉽게 재정의할 수 있습니다.
+
+또한 Payload의 내장 [CSS 변수](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_custom_properties)를 재정의할 수도 있습니다. 이러한 변수는 관리자 패널에서 광범위하게 사용되므로 이를 수정하면 관리자 UI의 모양과 느낌에 상당한 영향을 미칩니다.
+
+다음 변수들이 정의되어 있으며 재정의할 수 있습니다:
+
+- [중단점](https://github.com/payloadcms/payload/blob/main/packages/ui/src/scss/queries.scss)
+- [색상](https://github.com/payloadcms/payload/blob/main/packages/ui/src/scss/colors.scss)
+  - 기본 색상 음영 (기본적으로 흰색에서 검은색)
+  - 성공 / 경고 / 오류 색상 음영
+  - 테마별 색상 (배경, 입력 배경, 텍스트 색상 등)
+  - 고도 색상 (배경과 비교했을 때 얼마나 "밝아야" 하는지 결정하는 데 사용)
+- [크기 조정](https://github.com/payloadcms/payload/blob/main/packages/ui/src/scss/app.scss)
+  - 수평 거터
+  - 전환 속도
+  - 글꼴 크기
+  - 기타
+
+사용 가능한 모든 변수의 최신 포괄적인 목록은 [소스 코드](https://github.com/payloadcms/payload/blob/main/packages/ui/src/scss)를 참조하세요.
+
+<Banner type="warning">
+  **경고:** 색상이나 테마 고도를 재정의하는 경우 [변경 사항이 다크 모드에
+  어떤 영향을 미칠지](#dark-mode) 고려해야 합니다.
+</Banner>
+
+#### 다크 모드
+
+색상은 [관리자 패널](./overview)의 테마에 자동으로 적응하도록 설계되었습니다. 기본적으로 Payload는 모든 `--theme-elevation` 색상을 자동으로 재정의하고 다크 모드에 맞게 모든 성공 / 경고 / 오류 음영을 반전시킵니다. 또한 `--theme-bg`, `--theme-text` 등과 같은 일부 기본 테마 변수도 업데이트합니다.

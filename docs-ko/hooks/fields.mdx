@@ -1,0 +1,241 @@
+---
+title: Field Hooks
+label: Fields
+order: 40
+desc: Hooks는 모든 필드에 추가할 수 있으며, 선택적으로 작업이 계속되기 전에 필드의 반환 값을 수정할 수 있습니다.
+keywords: hooks, fields, config, configuration, documentation, Content Management System, cms, headless, javascript, node, react, nextjs
+---
+
+Field Hooks는 필드별로 Documents에서 실행되는 [Hooks](./overview)입니다. Document 라이프사이클의 특정 이벤트 중에 자신만의 로직을 실행할 수 있게 해줍니다. Field Hooks는 [Collection Hooks](./collections) 및 [Global Hooks](./globals)의 나머지 로직에서 로직을 분리할 수 있는 놀라운 잠재력을 제공합니다.
+
+Field에 Hooks를 추가하려면 [Field Config](../fields/overview)에서 `hooks` 속성을 사용하세요:
+
+```ts
+import type { Field } from 'payload'
+
+export const FieldWithHooks: Field = {
+  // ...
+  hooks: {
+    // highlight-line
+    // ...
+  },
+}
+```
+
+## Config Options
+
+모든 Field Hooks는 동기 또는 비동기 함수의 배열을 받습니다. 이러한 함수들은 작업이 계속되기 전에 선택적으로 필드의 반환 값을 수정할 수 있습니다. 모든 Field Hooks는 동일한 인수를 받도록 형식이 지정되어 있지만, 특정 hook 타입에 따라 일부 인수는 `undefined`일 수 있습니다.
+
+<Banner type="warning">
+  **중요:** GraphQL의 타입된 특성으로 인해 필드에서 반환하는 데이터의 타입을 변경하면
+  [GraphQL API](../graphql/overview)에서 오류가 발생합니다. 데이터의 모양이나 타입을
+  변경해야 하는 경우 대신 [Collection Hooks](./collections) 또는 [Global Hooks](./globals)를
+  고려하세요.
+</Banner>
+
+Field에 hooks를 추가하려면 [Field Config](../fields/overview)에서 `hooks` 속성을 사용하세요:```ts
+import type { Field } from 'payload';
+
+const FieldWithHooks: Field = {
+  name: 'name',
+  type: 'text',
+  // highlight-start
+  hooks: {
+    beforeValidate: [(args) => {...}],
+    beforeChange: [(args) => {...}],
+    beforeDuplicate: [(args) => {...}],
+    afterChange: [(args) => {...}],
+    afterRead: [(args) => {...}],
+  }
+  // highlight-end
+}
+```
+
+다음 인수들이 모든 Field Hooks에 제공됩니다:
+
+| Option                      | Description                                                                                                                                                                                    |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`collection`**            | 이 Hook이 실행되고 있는 [Collection](../configuration/collections)입니다. 필드가 Global에 속하는 경우 이것은 `null`입니다.                                                   |
+| **`context`**               | Hooks 간에 전달되는 사용자 정의 컨텍스트입니다. [자세한 내용](./context).                                                                                                                                |
+| **`data`**                  | `afterRead` hook에서는 전체 Document입니다. `create` 및 `update` 작업에서는 작업을 통해 전달되는 들어오는 데이터입니다.                                            |
+| **`field`**                 | Hook이 실행되고 있는 [Field](../fields/overview)입니다.                                                                                                                             |
+| **`findMany`**              | `afterRead` hook 내에서 하나를 찾는 것인지, 여러 개를 찾는 것인지를 나타내는 Boolean입니다.                                                                                    |
+| **`global`**                | 이 Hook이 실행되고 있는 [Global](../configuration/globals)입니다. 필드가 Collection에 속하는 경우 이것은 `null`입니다.                                                       |
+| **`operation`**             | 이 hook이 실행되고 있는 작업의 이름입니다. `beforeValidate`, `beforeChange`, `afterChange` hooks 내에서 `create`와 `update` 작업을 구별하는 데 유용합니다. |
+| **`originalDoc`**           | `update` 작업에서는 변경이 적용되기 전의 Document입니다. `afterChange` hook에서는 결과 Document입니다.                                                        |
+| **`overrideAccess`**        | 현재 작업이 [Access Control](../access-control/overview)을 재정의하고 있는지를 나타내는 boolean입니다.                                                                                       |
+| **`path`**                  | 스키마에서 [Field](../fields/overview)의 경로입니다.                                                                                                                                     |
+| **`previousDoc`**           | `afterChange` Hook에서는 변경이 적용되기 전의 Document입니다.                                                                                                                   |
+| **`previousSiblingDoc`**    | 변경이 적용되기 전의 Document의 형제 데이터로, `beforeChange`와 `afterChange` hook에서만 사용됩니다.                                                                                  |
+| **`previousValue`**         | 변경 전 필드의 이전 값으로, `beforeChange`와 `afterChange` hooks에서만 사용됩니다.                                                                                               |
+| **`req`**                   | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다. [Local API](../local-api/overview) 작업의 경우 모의로 처리됩니다.                                          |
+| **`schemaPath`**            | 스키마에서 [Field](../fields/overview)의 경로입니다.                                                                                                                                     |
+| **`siblingData`**           | Hook이 실행되고 있는 필드에 인접한 형제 필드의 데이터입니다.                                                                                                             |
+| **`siblingDocWithLocales`** | 모든 [Locales](../configuration/localization)를 포함한 Document의 형제 데이터입니다.                                                                                                            |
+| **`siblingFields`**         | hook이 실행되고 있는 필드의 형제 필드들입니다.                                                                                                                             |
+| **`value`**                 | [Field](../fields/overview)의 값입니다.                                                                                                                                                  |<Banner type="success">
+  **팁:** 실행 중인 작업에 기반하여 로직을 조건부로 범위를 지정하는 것이 좋습니다.
+  예를 들어, `beforeChange` hook을 작성하는 경우 현재 `operation`이 `create`인지
+  `update`인지에 따라 다른 로직을 수행할 수 있습니다.
+</Banner>
+
+### beforeValidate
+
+`create` 및 `update` 작업 중에 실행됩니다. 이 hook을 사용하면 들어오는 데이터가 서버 측에서 유효성 검사되기 전에 데이터를 추가하거나 형식을 지정할 수 있습니다.
+
+이것은 클라이언트 측 유효성 검사 전에는 실행되지 않는다는 점에 유의하세요. 프론트엔드에서 사용자 정의 필드 구성 요소를 렌더링하고 `validate` 함수를 제공하는 경우, 유효성 검사가 실행되는 순서는 다음과 같습니다:
+
+1. `validate`가 클라이언트에서 실행됩니다
+2. 성공하면 `beforeValidate`가 서버에서 실행됩니다
+3. `validate`가 서버에서 실행됩니다
+
+```ts
+import type { Field } from 'payload'
+
+const usernameField: Field = {
+  name: 'username',
+  type: 'text',
+  hooks: {
+    beforeValidate: [
+      ({ value }) => {
+        // 공백 제거 및 소문자로 변환
+        return value.trim().toLowerCase()
+      },
+    ],
+  },
+}
+```
+
+이 예제에서 `beforeValidate` hook은 `username` 필드를 처리하는 데 사용됩니다. hook은 필드의 들어오는 값을 받아 공백을 제거하고 소문자로 변환하여 변환합니다. 이렇게 하면 사용자명이 데이터베이스에 일관된 형식으로 저장됩니다.
+
+### beforeChange
+
+유효성 검사 직후에 `beforeChange` hooks는 `create` 및 `update` 작업 내에서 실행됩니다. 이 단계에서 문서에 저장될 필드 데이터가 필드 유효성 검사에 따라 유효하다고 확신할 수 있습니다.```ts
+import type { Field } from 'payload'
+
+const emailField: Field = {
+  name: 'email',
+  type: 'email',
+  hooks: {
+    beforeChange: [
+      ({ value, operation }) => {
+        if (operation === 'create') {
+          // 'create' 작업에 대한 추가 유효성 검사 또는 변환 수행
+        }
+        return value
+      },
+    ],
+  },
+}
+```
+
+`emailField`에서 `beforeChange` hook은 `operation` 타입을 확인합니다. 작업이 `create`인 경우 이메일 필드 값에 대한 추가 유효성 검사나 변환을 수행합니다. 이를 통해 작업별 로직을 필드에 적용할 수 있습니다.
+
+### afterChange
+
+`afterChange` hook은 필드의 값이 변경되어 데이터베이스에 저장된 후에 실행됩니다. 이 hook은 필드의 새 값에 기반한 후처리나 부수 효과를 트리거하는 데 유용합니다.
+
+```ts
+import type { Field } from 'payload'
+
+const membershipStatusField: Field = {
+  name: 'membershipStatus',
+  type: 'select',
+  options: [
+    { label: 'Standard', value: 'standard' },
+    { label: 'Premium', value: 'premium' },
+    { label: 'VIP', value: 'vip' },
+  ],
+  hooks: {
+    afterChange: [
+      ({ value, previousValue, req }) => {
+        if (value !== previousValue) {
+          // 멤버십 상태가 변경될 때 로그를 남기거나 작업 수행
+          console.log(
+            `User ID ${req.user.id} changed their membership status from ${previousValue} to ${value}.`,
+          )
+          // 여기서 한 티어에서 다른 티어로의 전환을 추적하는 작업을 구현할 수 있습니다
+        }
+      },
+    ],
+  },
+}
+```이 예제에서 `afterChange` hook은 사용자가 멤버십 레벨(Standard, Premium, VIP)을 선택할 수 있도록 하는 `membershipStatusField`와 함께 사용됩니다. hook은 멤버십 상태의 변경을 모니터링합니다. 변경이 발생하면 업데이트를 로깅하고 한 티어에서 다른 티어로의 전환 추적이나 멤버십 혜택의 변경에 대한 알림과 같은 추가 작업을 트리거하는 데 사용할 수 있습니다.
+
+### afterRead
+
+`afterRead` hook은 필드 값이 데이터베이스에서 읽힌 후에 호출됩니다. 이는 출력을 위해 필드 데이터를 형식화하거나 변환하는 데 이상적입니다.
+
+```ts
+import type { Field } from 'payload'
+
+const dateField: Field = {
+  name: 'createdAt',
+  type: 'date',
+  hooks: {
+    afterRead: [
+      ({ value }) => {
+        // 표시를 위한 날짜 형식화
+        return new Date(value).toLocaleDateString()
+      },
+    ],
+  },
+}
+```
+
+여기서 `dateField`의 `afterRead` hook은 `toLocaleDateString()`을 사용하여 날짜를 더 읽기 쉬운 형식으로 형식화하는 데 사용됩니다. 이 hook은 날짜가 사용자에게 표시되는 방식을 수정하여 더 사용자 친화적으로 만듭니다.
+
+### beforeDuplicate
+
+`beforeDuplicate` 필드 hook은 문서를 복제할 때 각 로케일(지역화 사용 시)에서 호출됩니다. 동일한 속성을 가진 문서들이 문제를 일으킬 수 있는 경우에 사용될 수 있습니다. 이는 `unique`, `required` 필드에서 중복된 이름을 피하거나 외부 시스템이 문서에서 반복되지 않는 값을 예상하는 경우에 도움을 줍니다.
+
+이 hook은 `beforeValidate` 및 `beforeChange` hooks가 호출되기 전에 호출됩니다.
+
+기본적으로 고유하고 필수인 텍스트 필드의 경우 Payload는 원본 문서 값에 "- Copy"를 추가합니다. 필드가 자체적인 것을 가지고 있다면 기본값은 추가되지 않으며, 오류를 피하기 위해 beforeDuplicate hook에서 고유하지 않은 값을 반환하거나 collection에서 `disableDuplicate` 옵션을 활성화해야 합니다.다음은 문서를 복제할 때 고유 제약 오류를 피하기 위해 번호를 증가시키는 hook을 가진 숫자 필드의 예입니다:
+
+```ts
+import type { Field } from 'payload'
+
+const numberField: Field = {
+  name: 'number',
+  type: 'number',
+  hooks: {
+    // 기존 값을 1만큼 증가
+    beforeDuplicate: [
+      ({ value }) => {
+        return (value ?? 0) + 1
+      },
+    ],
+  },
+}
+```
+
+## TypeScript
+
+Payload는 다음과 같이 접근하고 사용할 수 있는 필드 hooks에 대한 타입을 내보냅니다:
+
+```ts
+import type { FieldHook } from 'payload'
+
+// Field hook 타입은 세 개의 인수를 받는 제네릭입니다:
+// 1: 문서 타입
+// 2: 값 타입  
+// 3: 형제 데이터 타입
+
+type ExampleFieldHook = FieldHook<ExampleDocumentType, string, SiblingDataType>
+
+const exampleFieldHook: ExampleFieldHook = (args) => {
+  const {
+    value, // 위에 표시된 대로 `string`으로 타입됨
+    data, // ExampleDocumentType의 Partial로 타입됨
+    siblingData, // SiblingDataType의 Partial로 타입됨
+    originalDoc, // ExampleDocumentType으로 타입됨
+    operation,
+    req,
+  } = args
+
+  // 여기서 뭔가 수행...
+
+  return value // 위에 타입된 대로 string, undefined 또는 null을 반환해야 함
+}
+```

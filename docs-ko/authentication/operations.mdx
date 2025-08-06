@@ -1,0 +1,452 @@
+---
+title: 인증 작업
+label: 작업
+order: 20
+desc: 인증을 활성화하면 로그인, 로그아웃, 인증, 잠금 해제, 비밀번호 재설정 등과 같은 주요 작업이 자동으로 사용 가능해집니다.
+keywords: 인증, 구성, 설정, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+[컬렉션](../configuration/collections)에서 [인증](./overview)을 활성화하면 [로컬 API](../local-api/overview), [REST API](../rest-api/overview), [GraphQL API](../graphql/overview)에서 추가 인증 기반 작업이 자동으로 노출됩니다.
+
+## 접근
+
+접근 작업은 로그인한 사용자가 구성을 통해 등록된 컬렉션 및 글로벌에 대해 수행할 수 있는 작업과 수행할 수 없는 작업을 반환합니다. 이 데이터는 [관리자 패널](../admin/overview)이 하는 것처럼 앱에서 [접근 제어](../access-control/overview)를 기반으로 특정 기능을 표시하거나 숨겨야 하는 경우 매우 유용할 수 있습니다.
+
+**REST API 엔드포인트**:
+
+`GET http://localhost:3000/api/access`
+
+응답 예제:
+
+```ts
+{
+  canAccessAdmin: true,
+  collections: {
+    pages: {
+      create: {
+        permission: true,
+      },
+      read: {
+        permission: true,
+      },
+      update: {
+        permission: true,
+      },
+      delete: {
+        permission: true,
+      },
+      fields: {
+        title: {
+          create: {
+            permission: true,
+          },
+          read: {
+            permission: true,
+          },
+          update: {
+            permission: true,
+          },
+        }
+      }
+    }
+  }
+}
+```
+
+**GraphQL 쿼리 예제**:
+
+```graphql
+query {
+  Access {
+    pages {
+      read {
+        permission
+      }
+    }
+  }
+}
+```
+
+문서 접근은 컬렉션/글로벌 기준으로도 쿼리할 수 있습니다. 글로벌의 접근은 `http://localhost:3000/api/global-slug/access`와 같이 쿼리할 수 있고, 컬렉션 문서 접근은 `http://localhost:3000/api/collection-slug/access/:id`와 같이 쿼리할 수 있습니다.
+
+## Me
+
+토큰과 함께 로그인한 사용자를 반환하거나 로그인한 사용자가 없을 때 null을 반환합니다.
+
+**REST API 엔드포인트**:
+
+`GET http://localhost:3000/api/[collection-slug]/me`
+
+응답 예제:
+
+```ts
+{
+  user: { // 로그인한 사용자의 JWT "payload" ;)
+    email: 'dev@payloadcms.com',
+    createdAt: "2020-12-27T21:16:45.645Z",
+    updatedAt: "2021-01-02T18:37:41.588Z",
+    id: "5ae8f9bde69e394e717c8832"
+  },
+  token: '34o4345324...', // 사용자를 인증하는 데 사용할 수 있는 토큰
+  exp: 1609619861, // 사용자의 토큰이 만료될 시점을 나타내는 Unix 타임스탬프
+}
+```
+
+**GraphQL 쿼리 예제**:
+
+```graphql
+query {
+  me[collection-singular-label] {
+    user {
+      email
+    }
+    exp
+  }
+}
+```
+
+## 로그인
+
+`email`과 `password`를 받습니다. 성공하면 로그인한 사용자와 인증에 사용할 수 있는 토큰을 반환합니다. GraphQL과 REST API에서 이 작업은 또한 사용자의 토큰을 포함하는 HTTP 전용 쿠키를 자동으로 설정합니다. 로컬 API 작업에 `res`를 전달하면 Payload가 그곳에도 쿠키를 설정합니다.
+
+**REST API 로그인 예제**:
+
+```ts
+const res = await fetch('http://localhost:3000/api/[collection-slug]/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    email: 'dev@payloadcms.com',
+    password: 'this-is-not-our-password...or-is-it?',
+  }),
+})
+
+const json = await res.json()
+
+// JSON은 다음과 같습니다:
+/*
+{
+  user: {
+    email: 'dev@payloadcms.com',
+    createdAt: "2020-12-27T21:16:45.645Z",
+    updatedAt: "2021-01-02T18:37:41.588Z",
+    id: "5ae8f9bde69e394e717c8832"
+  },
+  token: '34o4345324...',
+  exp: 1609619861
+}
+*/
+```
+
+**GraphQL 뮤테이션 예제**:
+
+```graphql
+mutation {
+  login[collection-singular-label](email: "dev@payloadcms.com", password: "yikes") {
+    user {
+      email
+    }
+    exp
+    token
+  }
+}
+```
+
+**로컬 API 로그인 예제**:
+
+```ts
+const result = await payload.login({
+  collection: 'collection-slug',
+  data: {
+    email: 'dev@payloadcms.com',
+    password: 'get-out',
+  },
+})
+```
+
+<Banner type="success">
+  **서버 함수:** Payload는 로컬 API를 활용하는 바로 사용 가능한 `login` 서버
+  함수를 제공합니다. 통합 세부사항과 예제는 [서버 함수
+  문서](../local-api/server-functions#reusable-payload-server-functions)를
+  확인하세요.
+</Banner>
+
+## 로그아웃
+
+Payload가 HTTP 전용 쿠키를 설정하므로, 브라우저 내 JavaScript에서 HTTP 전용 쿠키에 접근할 수 없기 때문에 JavaScript에서 쿠키를 제거하는 것만으로는 로그아웃할 수 없습니다. 따라서 Payload는 안전한 방법으로 토큰을 삭제하는 `logout` 작업을 노출합니다.
+
+**REST API 로그아웃 예제**:
+
+```ts
+const res = await fetch(
+  'http://localhost:3000/api/[collection-slug]/logout?allSessions=false',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  },
+)
+```
+
+**GraphQL 뮤테이션 예제**:
+
+```
+mutation {
+  logoutUser(allSessions: false)
+}
+```
+
+<Banner type="success">
+  **서버 함수:** Payload는 원활한 로그아웃을 위해 사용자의 쿠키를 관리하는
+  바로 사용 가능한 `logout` 서버 함수를 제공합니다. 통합 세부사항과 예제는
+  [서버 함수
+  문서](../local-api/server-functions#reusable-payload-server-functions)를
+  확인하세요.
+</Banner>
+
+#### 세션이 활성화된 상태에서 로그아웃
+
+기본적으로 로그아웃은 로그아웃에 사용된 JWT와 관련된 세션만 종료합니다. 하지만 로그아웃하는 사용자의 모든 세션을 종료하려면 로그아웃 작업에 `allSessions: true`를 전달할 수 있습니다.
+
+## 새로고침
+
+JWT를 "새로고침"할 수 있게 해줍니다. 사용자가 곧 만료될 토큰을 가지고 있지만 여전히 활동 중이고 앱을 사용하고 있다면, 인증된 사용자를 통해 이 작업을 실행하여 `refresh` 작업을 사용해 새 토큰을 받을 수 있습니다.
+
+이 작업은 새 토큰을 다시 보내기 위해 만료되지 않은 토큰이 필요합니다. 사용자의 토큰이 이미 만료된 경우, 새 토큰을 검색하려면 다시 로그인하도록 허용해야 합니다.
+
+성공하면 이 작업은 자동으로 사용자의 HTTP 전용 쿠키를 갱신하고 JSON으로 업데이트된 토큰을 다시 보냅니다.
+
+**REST API 토큰 새로고침 예제**:
+
+```ts
+const res = await fetch(
+  'http://localhost:3000/api/[collection-slug]/refresh-token',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  },
+)
+
+const json = await res.json()
+
+// JSON은 다음과 같습니다:
+/*
+{
+  user: {
+    email: 'dev@payloadcms.com',
+    createdAt: "2020-12-27T21:16:45.645Z",
+    updatedAt: "2021-01-02T18:37:41.588Z",
+    id: "5ae8f9bde69e394e717c8832"
+  },
+  refreshedToken: '34o4345324...',
+  exp: 1609619861
+}
+*/
+```
+
+**GraphQL 뮤테이션 예제**:
+
+```
+mutation {
+  refreshToken[collection-singular-label] {
+    user {
+      email
+    }
+    refreshedToken
+  }
+}
+```
+
+<Banner type="success">
+  **서버 함수:** Payload는 자동으로 사용자의 토큰을 갱신하고 관련 쿠키를
+  업데이트하는 바로 사용 가능한 `refresh` 서버 함수를 제공합니다. 통합
+  세부사항과 예제는 [서버 함수
+  문서](../local-api/server-functions#reusable-payload-server-functions)를
+  확인하세요.
+</Banner>
+
+## 이메일로 인증
+
+컬렉션이 이메일 인증을 지원하는 경우, 인증 토큰을 받아 사용자의 `_verified` 속성을 `true`로 설정하여 사용자가 Payload API로 인증할 수 있도록 허용하는 인증 작업이 노출됩니다.
+
+**REST API 사용자 인증 예제**:
+
+```ts
+const res = await fetch(
+  `http://localhost:3000/api/[collection-slug]/verify/${TOKEN_HERE}`,
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  },
+)
+```
+
+**GraphQL 뮤테이션 예제**:
+
+```graphql
+mutation {
+  verifyEmail[collection-singular-label](token: "TOKEN_HERE")
+}
+```
+
+**로컬 API 인증 예제**:
+
+```ts
+const result = await payload.verifyEmail({
+  collection: 'collection-slug',
+  token: 'TOKEN_HERE',
+})
+```
+
+**참고:** `verifyEmail` 함수에 전달해야 하는 토큰은 인증에 고유하며 `forgotPassword` 작업에서 검색할 수 있는 토큰과는 다릅니다. 이는 숨겨진 `_verificationToken` 필드로 사용자 문서에서 찾을 수 있습니다. 이 토큰을 검색하려면 `showHiddenFields: true`를 설정하여 로컬 API의 `find` 또는 `findByID` 메서드를 사용할 수 있습니다.
+
+**참고:** `config.serverURL`이 설정되지 않은 경우, 사용자가 들어오는 `req`를 살펴보아 REST 또는 GraphQL을 통해 생성되었다면 Payload가 이를 생성하려고 시도합니다. 하지만 로컬 API의 `payload.create()` 메서드를 통해 사용자를 생성하는 경우에는 지원되지 않습니다. 이것이 적용되고 `serverURL`이 설정되지 않은 경우, 사용자를 적절한 인증 페이지로 연결하는 전체 URL을 제공하기 위해 `verify.generateEmailHTML` 함수를 재정의할 수 있습니다.
+
+## 잠금 해제
+
+사용자가 스스로를 잠그고 의도적으로 잠금을 해제하려는 경우 잠금 해제 작업을 활용할 수 있습니다. [관리자 패널](../admin/overview)은 최대 로그인 시도 기능이 있는 모든 컬렉션에 대해 자동으로 잠금 해제 컨트롤을 제공하지만, 잠금 해제 작업을 사용하여 프로그래밍 방식으로 사용자를 잠금 해제할 수도 있습니다.
+
+누가 사용자를 잠금 해제할 수 있는지 제한하려면 [`unlock`](../access-control/collections#unlock) 접근 제어 함수를 활용할 수 있습니다.
+
+**REST API 잠금 해제 예제**:
+
+```ts
+const res = await fetch(`http://localhost:3000/api/[collection-slug]/unlock`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+```
+
+**GraphQL 뮤테이션 예제**:
+
+```
+mutation {
+  unlock[collection-singular-label]
+}
+```
+
+**로컬 API 잠금 해제 예제**:
+
+```ts
+const result = await payload.unlock({
+  collection: 'collection-slug',
+})
+```
+
+## 비밀번호 찾기
+
+Payload에는 내장된 비밀번호 찾기 기능이 있습니다. 비밀번호 찾기 작업에 이메일 주소를 제출하면 이메일이 생성되고 비밀번호를 재설정할 수 있는 링크와 함께 해당 이메일 주소로 보내집니다.
+
+사용자의 비밀번호를 재설정하는 링크에는 사용자가 안전하게 비밀번호를 재설정할 수 있도록 허용하는 토큰이 포함되어 있습니다.
+
+기본적으로 비밀번호 찾기 작업은 사용자를 [관리자 패널](../admin/overview)로 보내 비밀번호를 재설정하지만, [이메일 HTML을 재정의](/docs/authentication/email#forgot-password)하여 대신 앱의 프론트엔드로 사용자를 보내도록 생성된 이메일을 커스터마이징할 수 있습니다.
+
+**REST API 비밀번호 찾기 예제**:
+
+```ts
+const res = await fetch(
+  `http://localhost:3000/api/[collection-slug]/forgot-password`,
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email: 'dev@payloadcms.com',
+    }),
+  },
+)
+```
+
+**GraphQL 뮤테이션 예제**:
+
+```
+mutation {
+  forgotPassword[collection-singular-label](email: "dev@payloadcms.com")
+}
+```
+
+**로컬 API 비밀번호 찾기 예제**:
+
+```ts
+const token = await payload.forgotPassword({
+  collection: 'collection-slug',
+  data: {
+    email: 'dev@payloadcms.com',
+  },
+  disableEmail: false, // 로컬 API를 통해 이메일 자동 생성을 비활성화할 수 있습니다
+})
+```
+
+<Banner type="info">
+  **참고:** `config.serverURL`이 설정되지 않은 경우, `forgot-password` 작업이
+  들어오는 `req`를 살펴보아 REST 또는 GraphQL을 통해 트리거되었다면
+  Payload가 이를 생성하려고 시도합니다. 하지만 로컬 API를 통해
+  `payload.forgotPassword()`를 호출하는 경우에는 지원되지 않습니다.
+  `serverURL`이 설정되지 않은 경우, 사용자를 적절한 비밀번호 재설정
+  페이지로 연결하는 전체 URL을 제공하기 위해
+  `auth.forgotPassword.generateEmailHTML` 함수를 재정의할 수 있습니다.
+</Banner>
+
+<Banner type="success">
+  **팁:**
+
+로컬 API를 사용하여 비밀번호 재설정 이메일이 전송되는 것을 중단할 수 있습니다. 이는
+프로그래밍 방식으로 사용자 계정을 생성해야 하지만 비밀번호는 설정하지 않을 때
+유용합니다. 이는 효과적으로 비밀번호 재설정 토큰을 생성하며, 이를 생성한 페이지로
+보내 사용자가 비밀번호를 설정하여 계정을 "완료"할 수 있도록 합니다. 백그라운드에서
+토큰을 사용하여 비밀번호를 "재설정"합니다.
+
+</Banner>
+
+## 비밀번호 재설정
+
+사용자가 비밀번호를 "잊어버리고" 토큰이 생성된 후, 해당 토큰을 새 비밀번호와 함께 비밀번호 재설정 작업으로 보내어 사용자가 비밀번호를 안전하게 재설정할 수 있습니다.
+
+**REST API 비밀번호 재설정 예제**:
+
+```ts
+const res = await fetch(`http://localhost:3000/api/[collection-slug]/reset-password`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    token: 'TOKEN_GOES_HERE'
+    password: 'not-today',
+  }),
+});
+
+const json = await res.json();
+
+// JSON은 다음과 같습니다:
+/*
+{
+  user: {
+    email: 'dev@payloadcms.com',
+    createdAt: "2020-12-27T21:16:45.645Z",
+    updatedAt: "2021-01-02T18:37:41.588Z",
+    id: "5ae8f9bde69e394e717c8832"
+  },
+  token: '34o4345324...',
+  exp: 1609619861
+}
+*/
+```
+
+**GraphQL 뮤테이션 예제**:
+
+```graphql
+mutation {
+  resetPassword[collection-singular-label](token: "TOKEN_GOES_HERE", password: "not-today")
+}
+```

@@ -1,0 +1,145 @@
+---
+title: 사용자 기본 설정 관리
+label: 기본 설정
+order: 60
+desc: 사용자가 관리자 패널과 상호 작용할 때의 기본 설정을 저장하세요.
+keywords: 관리자, 기본 설정, 커스텀, 커스터마이징, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+사용자가 [관리자 패널](./overview)과 상호 작용할 때, 다른 세션에서 또는 다른 기기에서 관리자 패널을 다시 방문할 때 중단한 지점에서 바로 이어갈 수 있도록 기본 설정을 지속적인 방식으로 저장하고 싶을 수 있습니다.
+
+기본적으로 Payload는 다음과 같은 몇 가지 방법으로 사용자 기본 설정의 지속성을 처리합니다:
+
+1. 컬렉션 목록 뷰의 열: 활성 상태와 순서
+1. 사용자의 마지막 활성 [로케일](../configuration/localization)
+1. `blocks`, `array`, `collapsible` 필드의 "접힌" 상태
+1. `Nav` 컴포넌트의 마지막 알려진 상태 등
+
+<Banner type="warning">
+  **중요:**
+
+모든 기본 설정은 개별 사용자 기준으로 저장됩니다. Payload는 제공된 모든 인증 방법을 통해 기본 설정을 읽거나 설정하는 사용자를 자동으로 인식합니다.
+
+</Banner>
+
+## 사용 사례
+
+이 API는 위에서 언급한 바와 같이 관리자 패널의 내부 작업에 크게 사용됩니다. 하지만 관리자 패널에서 사용할 자체 React 컴포넌트를 구축하는 경우, 사용자가 컴포넌트 사용에 대응하여 자체 기본 설정을 설정할 수 있도록 허용할 수 있습니다. 예를 들어:
+
+- "색상 선택기"를 구축한 경우, 다음 번에 쉽게 접근할 수 있도록 사용자가 설정한 마지막 사용 색상을 "기억"할 수 있습니다
+- 커스텀 `Nav` 컴포넌트를 구축하고 "아코디언 스타일" UI를 구축한 경우, 각 Nav 접을 수 있는 항목의 `collapsed` 상태를 저장하고 싶을 수 있습니다. 이렇게 하면 편집자가 패널로 돌아올 때 `Nav` 상태가 자동으로 지속됩니다
+- `Dashboard` 또는 유사한 곳에서 관리자 편집자에게 최근 접근한 문서로 쉽게 돌아갈 수 있는 단축키를 제공하기 위해 `recentlyAccessed` 문서를 저장하고 싶을 수 있습니다
+- 많은 다른 사용 사례가 존재합니다. 자체적으로 발명해보세요! 편집자에게 지능적이고 지속적인 편집 경험을 제공하세요.
+
+## 데이터베이스
+
+Payload는 사용자 기본 설정을 저장하는 내부적으로 사용되는 `payload-preferences` 컬렉션을 자동으로 생성합니다. `payload-preferences` 컬렉션의 각 문서는 다음 형태를 포함합니다:
+
+| 키                | 값                                                           |
+| ----------------- | ------------------------------------------------------------ |
+| `id`              | 저장된 각 기본 설정에 대한 고유 ID.                         |
+| `key`             | 기본 설정에 해당하는 고유 `key`.                            |
+| `user.value`      | 기본 설정을 저장하는 `user`의 ID.                           |
+| `user.relationTo` | `user`가 로그인한 컬렉션의 `slug`.                          |
+| `value`           | 기본 설정의 값. 필요한 모든 데이터 형태가 될 수 있습니다.   |
+| `createdAt`       | 기본 설정이 생성된 시간의 타임스탬프.                       |
+| `updatedAt`       | 기본 설정이 마지막으로 업데이트된 시간으로 설정된 타임스탬프. |
+
+## API
+
+기본 설정은 [GraphQL](/docs/graphql/overview#preferences)와 [REST](/docs/rest-api/overview#preferences) API 모두에서 사용할 수 있습니다.
+
+## 자체 컴포넌트에서 기본 설정 추가 또는 읽기
+
+Payload 관리자 패널은 `usePreferences` 훅을 제공합니다. 이 훅은 관리자 패널 자체 내에서만 사용하기 위한 것입니다. 두 가지 방법을 제공합니다:
+
+#### `getPreference`
+
+이 비동기 메서드는 `key`로 사용자의 기본 설정을 검색하는 쉬운 방법을 제공합니다. 결과 기본 설정 값을 포함하는 프로미스를 반환합니다.
+
+**인수**
+
+- `key`: 검색할 기본 설정의 `key`.
+
+#### `setPreference`
+
+또한 비동기인 이 메서드는 사용자 기본 설정을 설정하는 쉬운 방법을 제공합니다. `void`를 반환합니다.
+
+**인수:**
+
+- `key`: 설정할 기본 설정의 `key`.
+- `value`: 설정하고자 하는 기본 설정의 `value`.
+
+## 예제
+
+다음은 커스텀 관리자 패널 컴포넌트 내에서 `usePreferences`를 활용하는 방법의 예제입니다. 참고 - 이 예제는 완전히 유용하지 않으며 기본 설정 API를 활용하는 방법에 대한 참조일 뿐입니다. 이 경우 `ColorPicker` 또는 유사한 타입 컴포넌트 내에서 사용자의 마지막 사용 색상 히스토리를 설정하고 검색하는 방법을 보여줍니다.
+
+```tsx
+'use client'
+import React, { Fragment, useState, useEffect, useCallback } from 'react'
+import { usePreferences } from '@payloadcms/ui'
+
+const lastUsedColorsPreferenceKey = 'last-used-colors'
+
+export function CustomComponent() {
+  const { getPreference, setPreference } = usePreferences()
+
+  // 마지막 사용 색상을 로컬 상태에 저장
+  const [lastUsedColors, setLastUsedColors] = useState([])
+
+  // 마지막 사용 색상에 색상을 추가하는 콜백
+  const updateLastUsedColors = useCallback(
+    (color) => {
+      // 먼저 색상이 마지막 사용 색상에 이미 존재하는지 확인합니다.
+      // 이미 존재하면 기본 설정을 업데이트할 필요가 없습니다
+      const colorAlreadyExists = lastUsedColors.indexOf(color) > -1
+
+      if (!colorAlreadyExists) {
+        const newLastUsedColors = [...lastUsedColors, color]
+
+        setLastUsedColors(newLastUsedColors)
+        setPreference(lastUsedColorsPreferenceKey, newLastUsedColors)
+      }
+    },
+    [lastUsedColors, setPreference],
+  )
+
+  // 컴포넌트 마운트 시 기본 설정 검색
+  // `getPreference` 메서드가 변경되지 않기 때문에 이는 한 번만 실행됩니다
+  useEffect(() => {
+    const asyncGetPreference = async () => {
+      const lastUsedColorsFromPreferences = await getPreference(
+        lastUsedColorsPreferenceKey,
+      )
+      setLastUsedColors(lastUsedColorsFromPreferences)
+    }
+
+    asyncGetPreference()
+  }, [getPreference])
+
+  return (
+    <div>
+      <button type="button" onClick={() => updateLastUsedColors('red')}>
+        빨간색 사용
+      </button>
+      <button type="button" onClick={() => updateLastUsedColors('blue')}>
+        파란색 사용
+      </button>
+      <button type="button" onClick={() => updateLastUsedColors('purple')}>
+        보라색 사용
+      </button>
+      <button type="button" onClick={() => updateLastUsedColors('yellow')}>
+        노란색 사용
+      </button>
+      {lastUsedColors && (
+        <Fragment>
+          <h5>마지막 사용 색상:</h5>
+          <ul>
+            {lastUsedColors?.map((color) => <li key={color}>{color}</li>)}
+          </ul>
+        </Fragment>
+      )}
+    </div>
+  )
+}
+```

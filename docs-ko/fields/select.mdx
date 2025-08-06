@@ -1,0 +1,271 @@
+---
+title: 선택 필드
+label: 선택
+order: 160
+desc: 선택 필드는 미리 정의된 목록에서 옵션을 선택하기 위한 드롭다운 스타일 인터페이스를 제공합니다. 선택 필드 사용법, 예제 및 옵션을 알아보세요.
+keywords: 선택, 다중선택, 필드, 구성, 설정, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+선택 필드는 미리 정의된 목록에서 옵션을 열거형으로 선택하기 위한 드롭다운 스타일 인터페이스를 제공합니다.
+
+<LightDarkImage
+  srcLight="https://payloadcms.com/images/docs/fields/select.png"
+  srcDark="https://payloadcms.com/images/docs/fields/select-dark.png"
+  alt="Payload 관리자 패널의 선택 필드를 보여줍니다"
+  caption="선택 필드의 관리자 패널 스크린샷"
+/>
+
+선택 필드를 추가하려면 [필드 Config](./overview)에서 `type`을 `select`로 설정하세요:
+
+```ts
+import type { Field } from 'payload'
+
+export const MySelectField: Field = {
+  // ...
+  // highlight-start
+  type: 'select',
+  options: [
+    // ...
+  ],
+  // highlight-end
+}
+```
+
+## 구성 옵션
+
+| 옵션                   | 설명                                                                                                                                                                                                                                                                          |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`name`** \*          | 데이터베이스에서 저장되고 검색될 때 속성 이름으로 사용됩니다. [자세한 내용](/docs/fields/overview#field-names).                                                                                                                                                             |
+| **`options`** \*       | 필드가 저장할 수 있는 옵션의 배열입니다. 문자열 배열이거나 `label` 문자열과 `value` 문자열을 포함하는 객체의 배열일 수 있습니다.                                                                                                                                           |
+| **`hasMany`**          | `true`로 설정하면 이 필드가 하나의 선택 대신 여러 선택을 허용할 수 있게 하는 불린 값입니다.                                                                                                                                                                                 |
+| **`label`**            | 관리자 패널에서 필드 레이블로 사용되는 텍스트 또는 각 언어에 대한 키가 있는 객체.                                                                                                                                                                                           |
+| **`unique`**           | 컬렉션의 각 항목이 이 필드에 대해 고유한 값을 가지도록 강제합니다.                                                                                                                                                                                                           |
+| **`validate`**         | 관리자 패널과 백엔드 모두에서 실행될 커스텀 검증 함수를 제공합니다. [자세한 내용](/docs/fields/overview#validation).                                                                                                                                                       |
+| **`index`**            | 더 빠른 쿼리를 생성하기 위해 이 필드에 대한 [인덱스](../database/indexes)를 구축합니다. 사용자가 이 필드의 데이터에 대해 쿼리를 자주 수행하는 경우 이 필드를 `true`로 설정하세요.                                                                                         |
+| **`saveToJWT`**        | 이 필드가 최상위 레벨이고 [인증](/docs/authentication/overview)을 지원하는 config에 중첩되어 있는 경우, 해당 데이터를 사용자 JWT에 포함합니다.                                                                                                                             |
+| **`hooks`**            | 이 필드에 대한 로직을 제어하기 위해 필드 훅을 제공합니다. [자세한 내용](../hooks/fields).                                                                                                                                                                                   |
+| **`access`**           | 사용자가 이 필드의 데이터로 무엇을 보고 할 수 있는지를 나타내는 필드 접근 제어를 제공합니다. [자세한 내용](../access-control/fields).                                                                                                                                     |
+| **`hidden`**           | 모든 API에서 이 필드의 가시성을 완전히 제한합니다. 데이터베이스에는 여전히 저장되지만 API나 관리자 패널에는 나타나지 않습니다.                                                                                                                                             |
+| **`defaultValue`**     | 이 필드의 기본값으로 사용될 데이터를 제공합니다. [자세한 내용](/docs/fields/overview#default-values).                                                                                                                                                                      |
+| **`localized`**        | 이 필드에 대한 로컬라이제이션을 활성화합니다. 기본 config에서 [로컬라이제이션이 활성화](/docs/configuration/localization)되어야 합니다.                                                                                                                                    |
+| **`required`**         | 이 필드가 값을 가지도록 요구합니다.                                                                                                                                                                                                                                          |
+| **`admin`**            | 관리자 관련 구성. 자세한 내용은 [기본 필드 관리자 config](/docs/fields/overview#admin-options)를 참조하세요.                                                                                                                                                             |
+| **`custom`**           | 커스텀 데이터 추가를 위한 확장 지점 (예: 플러그인용)                                                                                                                                                                                                                         |
+| **`enumName`**         | SQL 데이터베이스 어댑터([Postgres](/docs/database/postgres)) 사용 시 이 필드에 대한 커스텀 enum 이름. 정의되지 않은 경우 name에서 자동 생성됩니다.                                                                                                                       |
+| **`dbName`**           | SQL 데이터베이스 어댑터([Postgres](/docs/database/postgres)) 사용 시 이 필드에 대한 커스텀 테이블 이름(`hasMany`가 `true`로 설정된 경우). 정의되지 않은 경우 name에서 자동 생성됩니다.                                                                                  |
+| **`interfaceName`**    | 최상위 레벨의 재사용 가능한 [Typescript 인터페이스](/docs/typescript/generating-types#custom-field-interfaces) 및 [GraphQL 타입](/docs/graphql/graphql-schema#custom-field-schemas)을 생성합니다.                                                                         |
+| **`filterOptions`**    | 사용자, 데이터 등을 기반으로 사용 가능한 옵션을 동적으로 필터링합니다. [자세한 내용](#filteroptions)                                                                                                                                                                       |
+| **`typescriptSchema`** | JSON 스키마 제공으로 필드 타입 생성을 재정의합니다                                                                                                                                                                                                                           |
+| **`virtual`**          | 데이터베이스에서 필드를 비활성화하려면 `true`를 제공하거나, [필드를 관계와 연결](/docs/fields/relationship#linking-virtual-fields-with-relationships)하기 위해 문자열 경로를 제공합니다. [가상 필드](https://payloadcms.com/blog/learn-how-virtual-fields-can-help-solve-common-cms-challenges) 참조 |
+
+_\* 별표는 필수 속성을 나타냅니다._
+
+<Banner type="warning">
+  **중요:** 옵션 값은 GraphQL 열거형 이름 제약으로 인해 하이픈이나 특수
+  문자를 포함하지 않는 문자열이어야 합니다. 밑줄은 허용됩니다. 옵션 값이
+  문자열이 아니거나 특수 문자를 포함해야 한다고 판단되는 경우, GraphQL enum으로
+  사용되기 전에 이에 따라 포맷됩니다.
+</Banner>
+
+### filterOptions
+
+현재 사용자, 문서 데이터 또는 기타 기준을 기반으로 사용 가능한 옵션을 동적으로 필터링하는 데 사용됩니다.
+
+이에 대한 몇 가지 예시는 다음과 같습니다:
+
+- 사용자의 역할을 기반으로 옵션을 제한, 예: 관리자 전용 옵션
+- 다른 필드의 값을 기반으로 다른 옵션을 표시, 예: 도시/주 선택기
+
+`filterOptions`의 결과는 다음을 결정합니다:
+
+- 관리자 패널에 표시되는 옵션
+- 데이터베이스에 저장할 수 있는 옵션
+
+이를 위해 [필드 Config](./overview)에서 `filterOptions` 속성을 사용하세요:
+
+```ts
+import type { Field } from 'payload'
+
+export const MySelectField: Field = {
+  // ...
+  // highlight-start
+  type: 'select',
+  options: [
+    {
+      label: 'One',
+      value: 'one',
+    },
+    {
+      label: 'Two',
+      value: 'two',
+    },
+    {
+      label: 'Three',
+      value: 'three',
+    },
+  ],
+  filterOptions: ({ options, data }) =>
+    data.disallowOption1
+      ? options.filter(
+          (option) =>
+            (typeof option === 'string' ? options : option.value) !== 'one',
+        )
+      : options,
+  // highlight-end
+}
+```
+
+<Banner type="warning">
+  **참고:** 이 속성은 [관계](./relationship) 또는 [업로드](./upload) 필드의
+  `filterOptions`와 유사하지만, 이 함수의 반환 값은 쿼리 제약이 아닌 단순히
+  옵션의 배열입니다.
+</Banner>
+
+## 관리자 옵션
+
+[관리자 패널](../admin/overview)에서 선택 필드의 외관과 동작을 커스터마이징하려면 `admin` 옵션을 사용할 수 있습니다:
+
+```ts
+import type { Field } from 'payload'
+
+export const MySelectField: Field = {
+  // ...
+  admin: {
+    // highlight-line
+    // ...
+  },
+}
+```
+
+선택 필드는 기본 [필드 관리자 Config](./overview#admin-options)의 모든 기본 관리자 옵션을 상속받으며, 다음 추가 옵션이 있습니다:
+
+| 속성              | 설명                                                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **`isClearable`** | 관리자 UI 내에서 이 필드를 클리어할 수 있도록 하려면 `true`로 설정합니다.                                             |
+| **`isSortable`**  | 드래그 앤 드롭을 사용하여 관리자 UI 내에서 이 필드를 정렬할 수 있도록 하려면 `true`로 설정합니다. (`hasMany`가 `true`로 설정된 경우에만 작동) |
+| **`placeholder`** | 일반적인 기본 플레이스홀더를 대체할 커스텀 텍스트 또는 함수를 정의합니다                                              |
+
+## 예제
+
+`collections/ExampleCollection.ts`
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const ExampleCollection: CollectionConfig = {
+  slug: 'example-collection',
+  fields: [
+    {
+      name: 'selectedFeatures', // required
+      type: 'select', // required
+      hasMany: true,
+      admin: {
+        isClearable: true,
+        isSortable: true, // 마우스를 사용하여 다양한 값을 드래그 앤 드롭하고, 원하는 대로 정렬
+      },
+      options: [
+        {
+          label: 'Metallic Paint',
+          value: 'metallic_paint',
+        },
+        {
+          label: 'Alloy Wheels',
+          value: 'alloy_wheels',
+        },
+        {
+          label: 'Carbon Fiber Dashboard',
+          value: 'carbon_fiber_dashboard',
+        },
+      ],
+    },
+  ],
+}
+```
+
+## 커스텀 컴포넌트
+
+### 필드
+
+#### 서버 컴포넌트
+
+```tsx
+import type { SelectFieldServerComponent } from 'payload'
+import type React from 'react'
+
+import { SelectField } from '@payloadcms/ui'
+
+export const CustomSelectFieldServer: SelectFieldServerComponent = ({
+  clientField,
+  path,
+  schemaPath,
+  permissions,
+}) => {
+  return (
+    <SelectField
+      field={clientField}
+      path={path}
+      schemaPath={schemaPath}
+      permissions={permissions}
+    />
+  )
+}
+```
+
+#### 클라이언트 컴포넌트
+
+```tsx
+'use client'
+import type { SelectFieldClientComponent } from 'payload'
+
+import { SelectField } from '@payloadcms/ui'
+import React from 'react'
+
+export const CustomSelectFieldClient: SelectFieldClientComponent = (props) => {
+  return <SelectField {...props} />
+}
+```
+
+### 레이블
+
+#### 서버 컴포넌트
+
+```tsx
+import React from 'react'
+import { FieldLabel } from '@payloadcms/ui'
+import type { SelectFieldLabelServerComponent } from 'payload'
+
+export const CustomSelectFieldLabelServer: SelectFieldLabelServerComponent = ({
+  clientField,
+  path,
+}) => {
+  return (
+    <FieldLabel
+      label={clientField?.label || clientField?.name}
+      path={path}
+      required={clientField?.required}
+    />
+  )
+}
+```
+
+#### 클라이언트 컴포넌트
+
+```tsx
+'use client'
+import React from 'react'
+import { FieldLabel } from '@payloadcms/ui'
+import type { SelectFieldLabelClientComponent } from 'payload'
+
+export const CustomSelectFieldLabelClient: SelectFieldLabelClientComponent = ({
+  field,
+  path,
+}) => {
+  return (
+    <FieldLabel
+      label={field?.label || field?.name}
+      path={path}
+      required={field?.required}
+    />
+  )
+}
+```

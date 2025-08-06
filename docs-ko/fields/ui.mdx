@@ -1,0 +1,64 @@
+---
+title: UI 필드
+label: UI
+order: 200
+desc: UI 필드는 순전히 프레젠테이션 목적이며 개발자가 관리자 패널을 매우 세세한 수준까지 커스터마이징할 수 있게 해주며, 액션과 기타 기능 추가도 포함됩니다.
+keywords: 커스텀 필드, 리액트 컴포넌트, 필드, 구성, 설정, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+UI (사용자 인터페이스) 필드는 [관리자 패널](../admin/overview)에 직접 자체 React 컴포넌트를 추가할 수 있는 강력한 기능을 제공하며, 다른 필드들 내에 직접 중첩됩니다. 문서의 데이터에는 전혀 영향을 주지 않습니다. 순전히 프레젠테이션 목적입니다. 다른 필드들 내에 직접 자체 React 컴포넌트를 "플러그인"하는 방법으로 생각하면 되며, 편집자들에게 원하는 위치에 정확히 새로운 컨트롤을 제공할 수 있습니다.
+
+UI 필드로 할 수 있는 것들:
+
+- 편집 뷰 본문 내에 주변 필드의 목적을 설명하는 커스텀 메시지나 텍스트 블록 추가
+- 주문의 편집 뷰 사이드바에 "환불" 버튼을 추가하여 커스텀 `refund` 엔드포인트에 fetch 호출을 하도록 함
+- 페이지 리스트 뷰에 "페이지 보기" 버튼을 추가하여 편집자들에게 사이트 프론트엔드에서 페이지를 보는 단축키 제공
+- 특정 문서의 캐시를 수동으로 지우는 "캐시 지우기" 버튼이나 유사한 메커니즘 구축
+
+UI 필드를 추가하려면 [필드 Config](./overview)에서 `type`을 `ui`로 설정하세요:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyUIField: Field = {
+  // ...
+  type: 'ui', // highlight-line
+}
+```
+
+## 구성 옵션
+
+| 옵션                            | 설명                                                                                                                   |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **`name`** \*                   | 이 필드의 고유 식별자.                                                                                                 |
+| **`label`**                     | 이 UI 필드에 대한 사람이 읽을 수 있는 레이블.                                                                          |
+| **`admin.components.Field`** \* | 편집 뷰 내에서 이 필드에 대해 렌더링될 React 컴포넌트. [자세한 내용](./overview#field).                                |
+| **`admin.components.Cell`**     | 컬렉션 리스트 뷰 내에서 Cell로 렌더링될 React 컴포넌트. [자세한 내용](./overview#cell).                               |
+| **`admin.disableListColumn`**   | UI 필드가 리스트 뷰 컬럼 선택기에 나타나지 않도록 하려면 `disableListColumn`을 `true`로 설정합니다.                   |
+| **`custom`**                    | 커스텀 데이터 추가를 위한 확장 지점 (예: 플러그인용)                                                                   |
+
+_\* 별표는 필수 속성을 나타냅니다._
+
+## 예제
+
+`collections/ExampleCollection.ts`
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const ExampleCollection: CollectionConfig = {
+  slug: 'example-collection',
+  fields: [
+    {
+      name: 'myCustomUIField', // required
+      type: 'ui', // required
+      admin: {
+        components: {
+          Field: '/path/to/MyCustomUIField',
+          Cell: '/path/to/MyCustomUICell',
+        },
+      },
+    },
+  ],
+}
+```

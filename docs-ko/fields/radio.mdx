@@ -1,0 +1,206 @@
+---
+title: 라디오 그룹 필드
+label: 라디오 그룹
+order: 120
+desc: 라디오 필드 타입은 미리 정의된 가능한 값 집합에서 하나의 값을 선택할 수 있게 해줍니다. 라디오 필드 사용법, 예제 및 옵션을 알아보세요.
+keywords: 라디오, 필드, 구성, 설정, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+라디오 필드는 미리 정의된 가능한 값 집합에서 하나의 값을 선택할 수 있게 해주며, [관리자 패널](../admin/overview)에 라디오 그룹 스타일의 입력 세트를 제공합니다.
+
+<LightDarkImage
+  srcLight="https://payloadcms.com/images/docs/fields/radio.png"
+  srcDark="https://payloadcms.com/images/docs/fields/radio-dark.png"
+  alt="Payload 관리자 패널의 라디오 필드를 보여줍니다"
+  caption="라디오 필드의 관리자 패널 스크린샷"
+/>
+
+라디오 필드를 추가하려면 [필드 Config](./overview)에서 `type`을 `radio`로 설정하세요:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyRadioField: Field = {
+  // ...
+  // highlight-start
+  type: 'radio',
+  options: [
+    // ...
+  ],
+  // highlight-end
+}
+```
+
+## 구성 옵션
+
+| 옵션                   | 설명                                                                                                                                                                                                                                                                          |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`name`** \*          | 데이터베이스에서 저장되고 검색될 때 속성 이름으로 사용됩니다. [자세한 내용](/docs/fields/overview#field-names).                                                                                                                                                             |
+| **`options`** \*       | 필드가 저장할 수 있는 옵션의 배열입니다. 문자열 배열이거나 `label` 문자열과 `value` 문자열을 포함하는 객체의 배열일 수 있습니다.                                                                                                                                           |
+| **`label`**            | 관리자 패널에서 필드 레이블로 사용되는 텍스트 또는 각 언어에 대한 키가 있는 객체.                                                                                                                                                                                           |
+| **`validate`**         | 관리자 패널과 백엔드 모두에서 실행될 커스텀 검증 함수를 제공합니다. [자세한 내용](/docs/fields/overview#validation).                                                                                                                                                       |
+| **`index`**            | 더 빠른 쿼리를 생성하기 위해 이 필드에 대한 [인덱스](../database/indexes)를 구축합니다. 사용자가 이 필드의 데이터에 대해 쿼리를 자주 수행하는 경우 이 필드를 `true`로 설정하세요.                                                                                         |
+| **`saveToJWT`**        | 이 필드가 최상위 레벨이고 [인증](/docs/authentication/overview)을 지원하는 config에 중첩되어 있는 경우, 해당 데이터를 사용자 JWT에 포함합니다.                                                                                                                             |
+| **`hooks`**            | 이 필드에 대한 로직을 제어하기 위해 필드 훅을 제공합니다. [자세한 내용](../hooks/fields).                                                                                                                                                                                   |
+| **`access`**           | 사용자가 이 필드의 데이터로 무엇을 보고 할 수 있는지를 나타내는 필드 접근 제어를 제공합니다. [자세한 내용](../access-control/fields).                                                                                                                                     |
+| **`hidden`**           | 모든 API에서 이 필드의 가시성을 완전히 제한합니다. 데이터베이스에는 여전히 저장되지만 API나 관리자 패널에는 나타나지 않습니다.                                                                                                                                             |
+| **`defaultValue`**     | 이 필드의 기본값으로 사용될 데이터를 제공합니다. 기본값은 `options`에서 제공된 값 내에 존재해야 합니다. [자세한 내용](/docs/fields/overview#default-values).                                                                                                              |
+| **`localized`**        | 이 필드에 대한 로컬라이제이션을 활성화합니다. 기본 config에서 [로컬라이제이션이 활성화](/docs/configuration/localization)되어야 합니다.                                                                                                                                    |
+| **`required`**         | 이 필드가 값을 가지도록 요구합니다.                                                                                                                                                                                                                                          |
+| **`admin`**            | 관리자 관련 구성. [자세한 내용](#admin-options).                                                                                                                                                                                                                             |
+| **`custom`**           | 커스텀 데이터 추가를 위한 확장 지점 (예: 플러그인용)                                                                                                                                                                                                                         |
+| **`enumName`**         | SQL 데이터베이스 어댑터([Postgres](/docs/database/postgres)) 사용 시 이 필드에 대한 커스텀 enum 이름. 정의되지 않은 경우 name에서 자동 생성됩니다.                                                                                                                       |
+| **`interfaceName`**    | 최상위 레벨의 재사용 가능한 [Typescript 인터페이스](/docs/typescript/generating-types#custom-field-interfaces) 및 [GraphQL 타입](/docs/graphql/graphql-schema#custom-field-schemas)을 생성합니다.                                                                         |
+| **`typescriptSchema`** | JSON 스키마 제공으로 필드 타입 생성을 재정의합니다                                                                                                                                                                                                                           |
+| **`virtual`**          | 데이터베이스에서 필드를 비활성화하려면 `true`를 제공하거나, [필드를 관계와 연결](/docs/fields/relationship#linking-virtual-fields-with-relationships)하기 위해 문자열 경로를 제공합니다. [가상 필드](https://payloadcms.com/blog/learn-how-virtual-fields-can-help-solve-common-cms-challenges) 참조 |
+
+_\* 별표는 필수 속성을 나타냅니다._
+
+<Banner type="warning">
+  **중요:**
+
+옵션 값은 GraphQL 열거형 이름 제약으로 인해 하이픈이나 특수 문자를 포함하지 않는 문자열이어야 합니다. 밑줄은 허용됩니다. 옵션 값이 문자열이 아니거나 특수 문자를 포함해야 한다고 판단되는 경우, GraphQL enum으로 사용되기 전에 이에 따라 포맷됩니다.
+
+</Banner>
+
+## 관리자 옵션
+
+[관리자 패널](../admin/overview)에서 라디오 필드의 외관과 동작을 커스터마이징하려면 `admin` 옵션을 사용할 수 있습니다:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyRadioField: Field = {
+  // ...
+  admin: {
+    // highlight-line
+    // ...
+  },
+}
+```
+
+라디오 필드는 기본 [필드 관리자 Config](./overview#admin-options)의 모든 기본 관리자 옵션을 상속받으며, 다음 추가 옵션이 있습니다:
+
+| 속성         | 설명                                                                                                        |
+| ------------ | ----------------------------------------------------------------------------------------------------------- |
+| **`layout`** | 라디오 그룹을 수평 또는 수직으로 분배된 목록으로 스타일링할 수 있게 합니다. 기본값은 `horizontal`입니다. |
+
+## 예제
+
+`collections/ExampleCollection.ts`
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const ExampleCollection: CollectionConfig = {
+  slug: 'example-collection',
+  fields: [
+    {
+      name: 'color', // required
+      type: 'radio', // required
+      options: [
+        // required
+        {
+          label: 'Mint',
+          value: 'mint',
+        },
+        {
+          label: 'Dark Gray',
+          value: 'dark_gray',
+        },
+      ],
+      defaultValue: 'mint', // options의 첫 번째 값.
+      admin: {
+        layout: 'horizontal',
+      },
+    },
+  ],
+}
+```
+
+## 커스텀 컴포넌트
+
+### 필드
+
+#### 서버 컴포넌트
+
+```tsx
+import type React from 'react'
+import { RadioGroupField } from '@payloadcms/ui'
+import type { RadioFieldServerComponent } from 'payload'
+
+export const CustomRadioFieldServer: RadioFieldServerComponent = ({
+  clientField,
+  path,
+  schemaPath,
+  permissions,
+}) => {
+  return (
+    <RadioGroupField
+      field={clientField}
+      path={path}
+      schemaPath={schemaPath}
+      permissions={permissions}
+    />
+  )
+}
+```
+
+#### 클라이언트 컴포넌트
+
+```tsx
+'use client'
+import React from 'react'
+import { RadioGroupField } from '@payloadcms/ui'
+import type { RadioFieldClientComponent } from 'payload'
+
+export const CustomRadioFieldClient: RadioFieldClientComponent = (props) => {
+  return <RadioGroupField {...props} />
+}
+```
+
+### 레이블
+
+#### 서버 컴포넌트
+
+```tsx
+import React from 'react'
+import { FieldLabel } from '@payloadcms/ui'
+import type { RadioFieldLabelServerComponent } from 'payload'
+
+export const CustomRadioFieldLabelServer: RadioFieldLabelServerComponent = ({
+  clientField,
+  path,
+  required,
+}) => {
+  return (
+    <FieldLabel
+      label={clientField?.label || clientField?.name}
+      path={path}
+      required={clientField?.required}
+    />
+  )
+}
+```
+
+#### 클라이언트 컴포넌트
+
+```tsx
+'use client'
+import React from 'react'
+import { FieldLabel } from '@payloadcms/ui'
+import type { RadioFieldLabelClientComponent } from 'payload'
+
+export const CustomRadioFieldLabelClient: RadioFieldLabelClientComponent = ({
+  field,
+  path,
+}) => {
+  return (
+    <FieldLabel
+      label={field?.label || field?.name}
+      path={path}
+      required={field?.required}
+    />
+  )
+}
+```

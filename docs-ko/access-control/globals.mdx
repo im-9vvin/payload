@@ -1,0 +1,143 @@
+---
+title: 글로벌 접근 제어
+label: 글로벌
+order: 30
+desc: 글로벌 수준 접근 제어는 각 글로벌의 `access` 속성 내에서 지정되며, 어떤 사용자가 글로벌을 읽거나 업데이트할 수 있는지 정의할 수 있습니다.
+keywords: 글로벌, 접근 제어, 권한, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+글로벌 접근 제어는 [글로벌](../configuration/globals) 문서에 대한 접근을 제한하고, 해당 글로벌과 관련하여 [관리자 패널](../admin/overview) 내에서 볼 수 있는 것과 볼 수 없는 것을 제한하는 데 사용되는 [접근 제어](../access-control/overview)입니다.
+
+글로벌에 접근 제어를 추가하려면 [글로벌 구성](../configuration/globals)에서 `access` 속성을 사용하세요:
+
+```ts
+import type { GlobalConfig } from 'payload'
+
+export const GlobalWithAccessControl: GlobalConfig = {
+  // ...
+  access: {
+    // highlight-line
+    // ...
+  },
+}
+```
+
+## 구성 옵션
+
+접근 제어는 요청의 작업에 따라 구체적입니다.
+
+[글로벌](../configuration/globals)에 접근 제어를 추가하려면 [글로벌 구성](../configuration/globals)에서 `access` 속성을 사용하세요:
+
+```ts
+import { GlobalConfig } from 'payload'
+
+const GlobalWithAccessControl: GlobalConfig = {
+  // ...
+  // highlight-start
+  access: {
+    read: ({ req: { user } }) => {...},
+    update: ({ req: { user } }) => {...},
+
+    // 버전이 활성화된 글로벌만
+    readVersions: () => {...},
+  },
+  // highlight-end
+}
+
+export default Header
+```
+
+다음 옵션들을 사용할 수 있습니다:
+
+| 함수         | 접근 허용/거부                                          |
+| ------------ | ------------------------------------------------------- |
+| **`read`**   | `findOne` 글로벌 작업에서 사용됩니다. [자세한 내용](#read).  |
+| **`update`** | `update` 글로벌 작업에서 사용됩니다. [자세한 내용](#update). |
+
+글로벌이 [버전](../versions/overview)을 지원하는 경우 다음 추가 옵션을 사용할 수 있습니다:
+
+| 함수               | 접근 허용/거부                                                                                                                                   |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`readVersions`** | 누가 버전을 읽을 수 있고 누가 읽을 수 없는지 제어하는 데 사용됩니다. 관리 UI 버전 보기 접근을 자동으로 제한합니다. [자세한 내용](#read-versions). |
+
+### Read
+
+현재 속성에 따라 누가 이 글로벌을 읽을 수 있는지 제한하는 boolean 결과 또는 선택적으로 [쿼리 제약 조건](../queries/overview)을 반환합니다.
+
+[글로벌](../configuration/globals)에 read 접근 제어를 추가하려면 [글로벌 구성](../configuration/globals)에서 `access` 속성을 사용하세요:
+
+```ts
+import { GlobalConfig } from 'payload'
+
+const Header: GlobalConfig = {
+  // ...
+  // highlight-start
+  access: {
+    read: ({ req: { user } }) => {
+      return Boolean(user)
+    },
+  },
+  // highlight-end
+}
+```
+
+`read` 함수에는 다음 인수가 제공됩니다:
+
+| 옵션      | 설명                                                                                                               |
+| --------- | ------------------------------------------------------------------------------------------------------------------ |
+| **`req`** | 현재 인증된 `user`를 포함하는 [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다.        |
+
+### Update
+
+현재 속성에 따라 누가 이 글로벌을 업데이트할 수 있는지 제한하는 boolean 결과 또는 선택적으로 [쿼리 제약 조건](../queries/overview)을 반환합니다.
+
+[글로벌](../configuration/globals)에 update 접근 제어를 추가하려면 [글로벌 구성](../configuration/globals)에서 `access` 속성을 사용하세요:
+
+```ts
+import { GlobalConfig } from 'payload'
+
+const Header: GlobalConfig = {
+  // ...
+  // highlight-start
+  access: {
+    update: ({ req: { user }, data }) => {
+      return Boolean(user)
+    },
+  },
+  // highlight-end
+}
+```
+
+`update` 함수에는 다음 인수가 제공됩니다:
+
+| 옵션       | 설명                                                                                                               |
+| ---------- | ------------------------------------------------------------------------------------------------------------------ |
+| **`req`**  | 현재 인증된 `user`를 포함하는 [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다.        |
+| **`data`** | 글로벌을 업데이트하기 위해 전달된 데이터입니다.                                                                      |
+
+### Read Versions
+
+글로벌에 [버전](../versions/overview)이 활성화되어 있는 경우, `readVersions` 접근 제어 함수는 현재 로그인한 사용자가 문서의 버전 기록에 접근할 수 있는지 여부를 결정합니다.
+
+컬렉션에 Read Versions 접근 제어를 추가하려면 [글로벌 구성](../configuration/globals)에서 `readVersions` 속성을 사용하세요:
+
+```ts
+import type { GlobalConfig } from 'payload'
+
+export const GlobalWithVersionsAccess: GlobalConfig = {
+  // ...
+  access: {
+    // highlight-start
+    readVersions: ({ req: { user } }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+`readVersions` 함수에는 다음 인수가 제공됩니다:
+
+| 옵션      | 설명                                                                                                               |
+| --------- | ------------------------------------------------------------------------------------------------------------------ |
+| **`req`** | 현재 인증된 `user`를 포함하는 [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다.        |

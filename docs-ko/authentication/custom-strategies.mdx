@@ -1,0 +1,97 @@
+---
+title: 커스텀 전략
+label: 커스텀 전략
+order: 60
+desc: Payload에서 모든 인증을 처리하는 커스텀 인증 전략을 생성하세요.
+keywords: 인증, 구성, 설정, 개요, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+<Banner type="warning">
+  이는 고급 기능이므로, 숙련된 개발자만 시도하세요. 그렇지 않으면
+  Payload의 내장 인증이 사용자 인증을 처리하도록 두세요.
+</Banner>
+
+### 전략 생성
+
+핵심적으로, 전략은 요청을 하는 사용자를 인증하는 방법입니다. `3.0`부터 [Passport](https://www.passportjs.org)에서 벗어나 막을 걷어내고 모든 제어권을 사용자에게 맡기는 방향으로 이동했습니다.
+
+전략은 다음으로 구성됩니다:
+
+| 매개변수               | 설명                                                      |
+| --------------------- | --------------------------------------------------------- |
+| **`name`** \*         | 전략의 이름                                                |
+| **`authenticate`** \* | 아래 매개변수를 받아 사용자를 반환하거나 null을 반환하는 함수. |
+
+`authenticate` 함수는 다음 인수를 전달받습니다:
+
+| 인수                    | 설명                                                                                                |
+| ---------------------- | --------------------------------------------------------------------------------------------------- |
+| **`canSetHeaders`** \* | 응답 헤더를 설정할 수 있는 컨텍스트에서 전략이 실행되고 있는지 여부. 기본값은 `false`.                      |
+| **`headers`** \*       | 들어오는 요청의 헤더. 요청에서 식별 가능한 정보를 검색하는 데 유용.                                        |
+| **`payload`** \*       | Payload 클래스. Payload에 대해 식별 가능한 정보를 인증하는 데 유용.                                     |
+| **`isGraphQL`**        | GraphQL 엔드포인트 내에서 전략이 실행되고 있는지 여부. 기본값은 `false`.                                 |
+
+### 예제 전략
+
+핵심적으로 전략은 단순히 들어오는 요청에서 정보를 가져와 사용자를 반환합니다. 이는 Payload의 내장 전략이 작동하는 방식과 정확히 같습니다.
+
+`authenticate` 메서드는 Payload 사용자 문서와 응답을 반환할 때 Payload가 설정하기를 원하는 선택적 헤더를 포함하는 객체를 반환해야 합니다.
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const Users: CollectionConfig = {
+  slug: 'users',
+  auth: {
+    disableLocalStrategy: true,
+    // highlight-start
+    strategies: [
+      {
+        name: 'custom-strategy',
+        authenticate: ({ payload, headers }) => {
+          const usersQuery = await payload.find({
+            collection: 'users',
+            where: {
+              code: {
+                equals: headers.get('code'),
+              },
+              secret: {
+                equals: headers.get('secret'),
+              },
+            },
+          })
+
+          return {
+            // 인증할 컬렉션 slug와 함께 사용자를 보내거나
+            // 인증할 사용자가 없으면 null을 보냅니다
+            user: usersQuery.docs[0] ? {
+              collection: 'users'
+              ...usersQuery.docs[0],
+            } : null,
+
+            // 선택적으로, Payload가 응답을 반환할 때
+            // 여기에서 설정하기를 원하는 헤더를
+            // 반환할 수 있습니다
+            responseHeaders: new Headers({
+              'some-header': 'my header value'
+            })
+          }
+        }
+      }
+    ]
+    // highlight-end
+  },
+  fields: [
+    {
+      name: 'code',
+      type: 'text',
+      index: true,
+      unique: true,
+    },
+    {
+      name: 'secret',
+      type: 'text',
+    },
+  ]
+}
+```

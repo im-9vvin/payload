@@ -1,0 +1,48 @@
+---
+title: 자신만의 React Context providers 교체하기
+label: Custom Providers
+order: 30
+desc:
+keywords: admin, components, custom, documentation, Content Management System, cms, headless, javascript, node, react, nextjs
+---
+
+[Admin Panel](../admin/overview)에 더 많은 [Custom Components](./overview)를 추가하다 보면, 앱에 추가 [React Context](https://react.dev/learn/scaling-up-with-reducer-and-context)를 추가하는 것이 유용할 수 있습니다. Payload는 자신만의 context providers를 주입할 수 있도록 하여 커스텀 훅 등을 내보낼 수 있게 합니다.
+
+Custom Provider를 추가하려면 [Payload Config](../configuration/overview)에서 `admin.components.providers` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  admin: {
+    components: {
+      providers: ['/path/to/MyProvider'], // highlight-line
+    },
+  },
+})
+```
+
+그런 다음 Custom Provider를 다음과 같이 구축하세요:
+
+```tsx
+'use client'
+import React, { createContext, use } from 'react'
+
+const MyCustomContext = React.createContext(myCustomValue)
+
+export function MyProvider({ children }: { children: React.ReactNode }) {
+  return <MyCustomContext value={myCustomValue}>{children}</MyCustomContext>
+}
+
+export const useMyCustomContext = () => use(MyCustomContext)
+```
+
+_Custom Components 구축 방법에 대한 자세한 내용은 [Building Custom Components](./overview#building-custom-components)를 참조하세요._
+
+<Banner type="warning">
+  **알림:** React Context는 Client Components 내에서만 존재합니다. 이는
+  파일 상단에 `use client` 지시어를 포함해야 하며 서버 전용 코드를
+  포함할 수 없다는 의미입니다. 여기에서 Server Component를 사용하려면
+  Client Component를 감싸기만 하면 됩니다.
+</Banner>

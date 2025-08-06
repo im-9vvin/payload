@@ -1,0 +1,295 @@
+---
+title: 마이그레이션
+label: 마이그레이션
+order: 20
+keywords: 데이터베이스, 마이그레이션, ddl, sql, mongodb, postgres, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, typescript, node, react, nextjs
+desc: Payload는 모두 TypeScript로 작성된 퍼스트 파티 데이터베이스 마이그레이션을 제공합니다.
+---
+
+Payload는 사용할 수 있는 완전한 마이그레이션 제어 도구를 제공합니다. 마이그레이션 명령은 프로젝트 디렉토리의 `npm run payload` 명령을 통해 액세스할 수 있습니다.
+
+`package.json` 파일에 "payload"라는 npm 스크립트가 있는지 확인하세요.
+
+```json
+{
+  "scripts": {
+    "payload": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload"
+  }
+}
+```
+
+<Banner>
+  Payload는 시스템에 전역적으로 설치되지 않아야 하므로, 사용하고 있는
+  패키지 매니저를 통해 Payload 마이그레이션을 실행해야 합니다.
+</Banner>
+
+## 마이그레이션 파일 내용
+
+Payload는 지정할 수 있는 폴더에 생성된 모든 마이그레이션을 저장합니다. 기본적으로 마이그레이션은 `./src/migrations`에 저장됩니다.
+
+마이그레이션 파일에는 두 가지 export가 있습니다 - 마이그레이션이 실행될 때 호출되는 `up` 함수와 어떤 이유로든 마이그레이션이 성공적으로 완료되지 못하는 경우 호출되는 `down` 함수입니다. `up` 함수에는 마이그레이션 내에서 시도하는 모든 변경 사항이 포함되어야 하고, `down`은 이상적으로 변경 사항을 되돌려야 합니다.
+
+다음은 마이그레이션 파일의 예제입니다:
+
+```ts
+import { MigrateUpArgs, MigrateDownArgs } from '@payloadcms/your-db-adapter'
+
+export async function up({ payload, req }: MigrateUpArgs): Promise<void> {
+  // 여기서 데이터베이스에 변경 사항을 수행합니다.
+  // `payload`를 인수로 액세스할 수 있고,
+  // 모든 것이 TypeScript로 수행됩니다.
+}
+
+export async function down({ payload, req }: MigrateDownArgs): Promise<void> {
+  // `up` 함수가 실패하는 경우 변경 사항을 되돌리는 데 필요한 모든 작업을 수행합니다
+}
+```
+
+## 트랜잭션 사용
+
+마이그레이션이 실행될 때 각 마이그레이션은 새로운 [트랜잭션](/docs/database/transactions)에서 수행됩니다. 트랜잭션 내에서 데이터베이스 변경을 하기 위해 [Local API](/docs/local-api/overview)나 `payload.db.updateMany()`와 같은 직접 데이터베이스 호출에 `req` 객체를 전달하기만 하면 됩니다. 오류가 발생하지 않았다고 가정하면, `up` 또는 `down` 함수가 실행된 후 트랜잭션이 커밋됩니다. 마이그레이션이 어느 지점에서 오류가 발생하거나 커밋에 실패하면, 이를 포착하고 트랜잭션이 중단됩니다. 이렇게 하여 마이그레이션이 실패하면 데이터베이스에 변경 사항이 적용되지 않습니다.
+
+### 트랜잭션과 함께 데이터베이스 직접 사용
+
+또한 Payload의 레이어를 완전히 우회하고 활성 트랜잭션 내에서 기본 데이터베이스에서 직접 작업을 수행할 수 있습니다:
+
+### MongoDB:
+
+```ts
+import { type MigrateUpArgs } from '@payloadcms/db-mongodb'
+
+export async function up({
+  session,
+  payload,
+  req,
+}: MigrateUpArgs): Promise<void> {
+  const posts = await payload.db.collections.posts.collection
+    .find({ session })
+    .toArray()
+}
+```
+
+### Postgres:
+
+```ts
+import { type MigrateUpArgs, sql } from '@payloadcms/db-postgres'
+
+export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
+  const { rows: posts } = await db.execute(sql`SELECT * from posts`)
+}
+```
+
+### SQLite:
+
+SQLite에서는 기본적으로 트랜잭션이 비활성화되어 있습니다. [자세한 내용](./transactions).
+
+```ts
+import { type MigrateUpArgs, sql } from '@payloadcms/db-sqlite'
+
+export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
+  const { rows: posts } = await db.run(sql`SELECT * from posts`)
+}
+```
+
+## 마이그레이션 디렉토리
+
+각 DB 어댑터에는 마이그레이션을 저장/읽을 위치를 재정의할 수 있는 선택적 속성 `migrationDir`이 있습니다. 이것이 지정되지 않으면 Payload는 기본값을 확인하고 `./src/migrations`, `./dist/migrations`, `./migrations` 등과 같은 일반적인 위치를 검색하여 마이그레이션 디렉토리를 찾기 위해 최선의 노력을 기울일 것입니다.
+
+모든 데이터베이스 어댑터는 유사한 마이그레이션 패턴을 구현해야 하지만, 어댑터와 그 특정 요구 사항에 따라 작은 차이가 있을 것입니다. 다음은 데이터베이스 어댑터에서 지원되어야 하는 모든 마이그레이션 명령 목록입니다.
+
+## 명령
+
+### Migrate
+
+`migrate` 명령은 아직 실행되지 않은 마이그레이션을 실행합니다.
+
+```text
+npm run payload migrate
+```
+
+### Create
+
+마이그레이션 디렉토리에 새 마이그레이션 파일을 생성합니다. 생성될 마이그레이션의 이름을 선택적으로 지정할 수 있습니다. 기본적으로 마이그레이션은 타임스탬프를 사용하여 이름이 지정됩니다.
+
+```text
+npm run payload migrate:create optional-name-here
+```
+
+플래그:
+
+- `--skip-empty`: Postgres의 경우, CI에서 마이그레이션 생성에 유용할 수 있는 "스키마 변경이 감지되지 않았습니다. 빈 마이그레이션 파일을 생성하시겠습니까?" 프롬프트를 건너뜁니다.
+- `--force-accept-warning`: 모든 명령 프롬프트를 수락하고, 스키마에 변경 사항이 없더라도 빈 마이그레이션을 생성합니다.
+
+### Status
+
+`migrate:status` 명령은 마이그레이션 상태를 확인하고 어떤 마이그레이션이 실행되었고 어떤 마이그레이션이 아직 실행되지 않았는지에 대한 테이블을 출력합니다.
+
+`payload migrate:status`
+
+```text
+npm run payload migrate:status
+```
+
+### Down
+
+마지막 마이그레이션 배치를 롤백합니다.
+
+```text
+npm run payload migrate:down
+```
+
+### Refresh
+
+실행된 모든 마이그레이션을 롤백하고 다시 실행합니다.
+
+```text
+npm run payload migrate:refresh
+```
+
+### Reset
+
+모든 마이그레이션을 롤백합니다.
+
+```text
+npm run payload migrate:reset
+```
+
+### Fresh
+
+데이터베이스에서 모든 엔티티를 삭제하고 모든 마이그레이션을 처음부터 다시 실행합니다.
+
+```text
+npm run payload migrate:fresh
+```
+
+## 마이그레이션을 언제 실행할지
+
+사용하는 데이터베이스 어댑터에 따라 마이그레이션 워크플로우가 약간 다를 수 있습니다.
+
+관계형 데이터베이스에서는 개발 환경이 아닌 데이터베이스 환경에서 마이그레이션이 **필요**합니다. 하지만 MongoDB의 경우 마이그레이션을 가끔만 실행하거나 (심지어 전혀 필요하지 않을 수도 있습니다).
+
+#### MongoDB#mongodb-migrations
+
+MongoDB에서는 데이터베이스 형태를 변경하고 기존 데이터가 많아서 Shape A에서 Shape B로 변환하고 싶을 때만 마이그레이션을 실행하면 됩니다.
+
+이 경우 `pnpm payload migrate:create`를 실행하여 마이그레이션을 생성한 다음 문서를 새로운 형태로 마이그레이션하는 데 필요한 로직을 작성할 수 있습니다. 그런 다음 빌드/배포하기 전에 CI에서 마이그레이션을 실행하거나, 로컬 컴퓨터에서 프로덕션 데이터베이스 연결 문자열을 사용하여 프로덕션 데이터베이스에 대해 로컬에서 `pnpm payload migrate` 명령을 실행할 수 있습니다.
+
+#### Postgres#postgres-migrations
+
+Postgres와 같은 관계형 데이터베이스에서 마이그레이션은 좀 더 중요합니다. 새 필드나 새 컬렉션을 추가할 때마다 Payload Config와 일치하도록 데이터베이스의 형태를 업데이트해야 하기 때문입니다 (그렇지 않으면 데이터를 읽기/쓰기 시도할 때 오류가 발생합니다).
+
+이는 Payload의 Postgres 사용자가 전체 마이그레이션 워크플로우를 처음부터 끝까지 익혀야 함을 의미합니다.
+
+다음은 개발 데이터베이스에 대해 로컬에서 작업하고, 마이그레이션을 생성한 다음, 배포하기 전에 프로덕션 데이터베이스에 대해 마이그레이션을 실행하는 일반적인 워크플로우의 개요입니다.
+
+**1 - push 모드를 사용하여 로컬에서 작업**
+
+Payload는 Drizzle ORM의 강력한 `push` 모드를 사용하여 개발 모드에서 데이터 변경 사항을 자동으로 데이터베이스에 동기화합니다. 기본적으로 이는 활성화되어 있으며 로컬 개발을 하면서 Postgres와 Payload를 사용하는 권장 워크플로우입니다.
+
+이 설정을 비활성화하고 마이그레이션만 사용하여 로컬 개발 데이터베이스를 관리할 수 있지만 (Postgres 어댑터에 `push: false` 전달), 비활성화하면 개발 모드를 실행하는 동안 빈번한 오류가 발생할 수 있습니다. 이는 Payload가 새로운 데이터 형태로 업데이트되었지만 로컬 데이터베이스는 업데이트되지 않았기 때문입니다.
+
+이러한 이유로 `push`를 기본 설정으로 두고 로컬 개발 데이터베이스를 샌드박스로 취급하는 것을 권장합니다.
+
+push 모드와 개발에서의 프로토타이핑에 대한 자세한 정보는 [여기를 클릭하세요](./postgres#prototyping-in-development-mode).
+
+Payload의 일반적인 워크플로우는 Payload configs를 구축하고, 플러그인을 설치하며, 개발 모드에서 진행하는 것입니다 - Drizzle이 변경 사항을 로컬 데이터베이스에 푸시하도록 허용합니다. 완료되면 마이그레이션을 생성할 수 있습니다.
+
+하지만 중요한 것은 Drizzle이 이미 변경 사항을 데이터베이스에 푸시했기 때문에 개발 데이터베이스에 대해 마이그레이션을 실행할 필요가 없다는 것입니다.
+
+<Banner type="warning">
+  경고: 로컬 개발 데이터베이스에서 "push"와 마이그레이션을 혼용하지 마세요.
+  로컬에서 "push"를 사용한 다음 마이그레이션을 시도하면 Payload가
+  경고를 발생시켜 이 두 방법이 상호교환적으로 사용되지 않는다고 알려줍니다.
+</Banner>
+
+**2 - 마이그레이션 생성**
+
+Payload Config에서 작업을 완료하면 마이그레이션을 생성할 수 있습니다. 마이그레이션을 생성하기 전에 특정 작업을 완료하거나 기능을 완전히 구축하는 것이 좋은 관행입니다.
+
+하지만 준비가 되면 `pnpm payload migrate:create`를 실행할 수 있으며, 이는 다음 단계를 수행합니다:
+
+- 기존 마이그레이션을 찾고, 이전 상태에서 Payload Config의 새 상태로 스키마를 변환하는 데 필요한 SQL 변경 사항을 자동으로 생성합니다
+- 그런 다음 실행되어야 하는 모든 SQL이 포함된 새 마이그레이션 파일을 `/migrations` 폴더에 생성합니다
+
+하지만 즉시 이 마이그레이션을 실행하지는 않습니다.
+
+<Banner type="success">
+  팁: Payload에서 생성된 마이그레이션은 본질적으로 상당히 프로그래밍적이므로
+  놀랄 일이 없어야 하지만, 생성된 마이그레이션을 체크인하기 전에 항상
+  마이그레이션 파일의 내용을 두 번 확인하는 것이 좋습니다.
+</Banner>
+
+**3 - 마이그레이션을 실행하도록 빌드 프로세스 설정**
+
+일반적으로 프로덕션을 위해 Payload를 빌드하기 전에 마이그레이션을 실행하려고 합니다. 이는 일반적으로 CI 파이프라인에서 발생하며 보통 빌드 스크립트를 지정하여 Payload Cloud, Vercel 또는 Netlify와 같은 플랫폼에서 구성할 수 있습니다.
+
+CI에서 마이그레이션을 실행하도록 설정된 `package.json`의 일반적인 스크립트 세트는 다음과 같습니다:
+
+```js
+  "scripts": {
+    // 개발 모드에서 실행하기 위해
+    "dev": "next dev --turbo",
+
+    // 프로덕션을 위해 Next + Payload 앱을 빌드하기 위해
+    "build": "next build",
+
+    // 편의를 위한 Payload의 CLI에 대한 "연결"
+    // 이는 `pnpm payload migrate:create` 등을 실행하는 데 도움이 됩니다
+    "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
+
+    // 이 명령이 `build script`로 설정할 명령입니다.
+    // `payload migrate`를 실행한 다음 `pnpm build`를 실행하는 것을 보시겠습니까?
+    // 이는 빌드하기 전에 CI에서 프로덕션 데이터베이스에 대해
+    // 모든 마이그레이션을 실행합니다
+    "ci": "payload migrate && pnpm build",
+  },
+```
+
+위 예제에서 프로덕션에 배포하는 플랫폼에서 "빌드 스크립트"로 사용할 수 있는 `ci` 스크립트를 지정했습니다.
+
+이를 위해서는 빌드 파이프라인이 데이터베이스에 연결할 수 있어야 하며, 빌드 프로세스를 시작하기 전에 단순히 `payload migrate` 명령을 실행합니다. `payload migrate`를 호출하면 Payload는 생성된 순서대로 프로덕션 데이터베이스에 대해 아직 실행되지 않은 `/migrations` 폴더의 모든 마이그레이션을 자동으로 실행합니다.
+
+실패하면 배포가 거부됩니다. 하지만 이제 마이그레이션을 실행하도록 빌드 스크립트가 설정되어 있으면 모든 준비가 완료됩니다! 다음에 배포할 때 CI가 필요한 마이그레이션을 실행하고 데이터베이스가 Payload Config가 요구하는 형태에 맞춰질 것입니다.
+
+## 프로덕션에서 마이그레이션 실행
+
+특정 경우에는 서버가 시작될 때 런타임에 마이그레이션을 실행하고 싶을 수 있습니다. 빌드하는 동안 데이터베이스 연결에 액세스할 수 없거나 유사한 이유로 빌드 시간에 마이그레이션을 실행하는 것이 불가능할 수 있습니다.
+
+Node 서버가 한 번 시작되어 초기화된 상태를 유지하는 장기 실행 서버나 컨테이너를 사용하는 경우, CI 내에서 대신 서버 시작 시 마이그레이션을 실행하는 것을 선호할 수 있습니다.
+
+초기화 시 런타임에 마이그레이션을 실행하려면 다음과 같이 데이터베이스 어댑터의 `prodMigrations` 키 하에 마이그레이션을 전달할 수 있습니다:
+
+```ts
+// Payload가 생성하는 `index.ts` 파일에서
+// 마이그레이션을 가져옵니다
+import { migrations } from './migrations'
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // 여기에 config
+  db: postgresAdapter({
+    //  여기에 어댑터 config
+    prodMigrations: migrations,
+  }),
+})
+```
+
+위와 같이 마이그레이션을 전달하면 Payload가 프로덕션에서만 Payload 초기화를 완료하기 전에 실행되어야 하는 마이그레이션을 실행하도록 지시합니다. 이는 Payload가 시작 시에만 초기화되는 장기 실행 서비스에 이상적입니다.
+
+<Banner type="warning">
+  **경고:** Payload가 프로덕션에서 마이그레이션을 실행하도록 지시받으면
+  Vercel과 같은 플랫폼에서 서버리스 콜드 스타트가 느려질 수 있습니다.
+  일반적으로 이 옵션은 장기 실행 서버/컨테이너에서만 사용되어야 합니다.
+</Banner>
+
+## 환경별 구성 및 마이그레이션
+
+구성에는 환경별 설정이 포함될 수 있습니다 (예: 프로덕션에서만 플러그인 활성화). 환경을 고려하지 않고 마이그레이션을 생성하면 불일치와 문제가 발생할 수 있습니다. 로컬에서 마이그레이션을 실행할 때 Payload는 개발 환경을 사용하며, 이는 프로덕션별 구성을 놓칠 수 있습니다. 마찬가지로 프로덕션에서 마이그레이션을 실행하면 개발별 엔티티를 놓칠 수 있습니다.
+
+이는 쉽게 간과되는 부분이므로 마이그레이션을 처리할 때 config의 환경별 로직에 주의하세요.
+
+**이를 해결하는 방법:**
+
+- 마이그레이션이 생성된 후 환경별 구성을 포함하도록 마이그레이션 파일을 수동으로 업데이트합니다.
+- 마이그레이션을 생성할 때 필요한 업데이트를 캡처하기 위해 로컬 설정에서 필요한 프로덕션 환경 변수를 일시적으로 활성화합니다.
+- 각 환경에 대해 별도의 마이그레이션 파일을 사용하여 해당 환경에서 올바른 마이그레이션이 실행되도록 합니다.

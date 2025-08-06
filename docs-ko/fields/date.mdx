@@ -1,0 +1,249 @@
+---
+title: 날짜 필드
+label: 날짜
+order: 70
+desc: 날짜 필드 타입은 데이터베이스에 날짜를 저장합니다. 날짜 필드를 사용하고 커스터마이징하는 방법을 알아보세요. 예제와 옵션을 확인하세요.
+keywords: 날짜, 필드, 구성, 설정, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+날짜 필드는 데이터베이스에 날짜를 저장하고 [관리자 패널](../admin/overview)에 커스터마이징 가능한 시간 선택 인터페이스를 제공합니다.
+
+<LightDarkImage
+  srcLight="https://payloadcms.com/images/docs/fields/date.png"
+  srcDark="https://payloadcms.com/images/docs/fields/date-dark.png"
+  alt="Payload 관리자 패널의 날짜 필드를 보여줍니다"
+  caption="이 필드는 UI에 `react-datepicker` 컴포넌트를 사용하고 있습니다."
+/>
+
+날짜 필드를 추가하려면 [필드 Config](./overview)에서 `type`을 `date`로 설정하세요:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyDateField: Field = {
+  // ...
+  type: 'date', // highlight-line
+}
+```
+
+## 구성 옵션
+
+| 옵션                   | 설명                                                                                                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`name`** \*          | 데이터베이스에 저장되고 검색될 때 속성 이름으로 사용됩니다. [자세한 내용](/docs/fields/overview#field-names).                                                            |
+| **`label`**            | 관리자 패널에서 필드 레이블로 사용되는 텍스트 또는 각 언어의 키가 있는 객체.                                                                                              |
+| **`index`**            | 더 빠른 쿼리를 생성하기 위해 이 필드에 대한 [인덱스](../database/indexes)를 구축합니다. 사용자가 이 필드의 데이터에 대해 자주 쿼리를 수행하는 경우 이 필드를 `true`로 설정하세요. |
+| **`validate`**         | 관리자 패널과 백엔드 모두에서 실행될 커스텀 유효성 검사 함수를 제공합니다. [자세한 내용](/docs/fields/overview#validation).                                              |
+| **`saveToJWT`**        | 이 필드가 최상위 수준이고 [인증](/docs/authentication/overview)을 지원하는 구성에 중첩된 경우 해당 데이터를 사용자 JWT에 포함합니다.                                    |
+| **`hooks`**            | 이 필드에 대한 로직을 제어하기 위해 필드 훅을 제공합니다. [자세한 내용](../hooks/fields).                                                                                  |
+| **`access`**           | 사용자가 이 필드의 데이터로 무엇을 보고 할 수 있는지 나타내는 필드 액세스 제어를 제공합니다. [자세한 내용](../access-control/fields).                                    |
+| **`hidden`**           | 모든 API에서 이 필드의 가시성을 완전히 제한합니다. 데이터베이스에는 여전히 저장되지만 API나 관리자 패널에는 표시되지 않습니다.                                           |
+| **`defaultValue`**     | 이 필드의 기본값으로 사용할 데이터를 제공합니다. [자세한 내용](/docs/fields/overview#default-values).                                                                    |
+| **`localized`**        | 이 필드에 대해 현지화를 활성화합니다. 기본 구성에서 [현지화가 활성화](/docs/configuration/localization)되어야 합니다.                                                    |
+| **`required`**         | 이 필드에 값이 있어야 합니다.                                                                                                                                             |
+| **`admin`**            | 관리자 특정 구성. [자세한 내용](#admin-options).                                                                                                                          |
+| **`custom`**           | 커스텀 데이터 추가를 위한 확장 지점 (예: 플러그인용)                                                                                                                      |
+| **`timezone`** \*      | 이 필드에서 타임존 선택을 활성화하려면 `true`로 설정합니다. [자세한 내용](#timezones).                                                                                    |
+| **`typescriptSchema`** | JSON 스키마 제공으로 필드 유형 생성을 재정의                                                                                                                              |
+| **`virtual`**          | 데이터베이스에서 필드를 비활성화하려면 `true`를 제공하거나 [관계와 필드를 연결](/docs/fields/relationship#linking-virtual-fields-with-relationships)하기 위해 문자열 경로를 제공합니다. [가상 필드](https://payloadcms.com/blog/learn-how-virtual-fields-can-help-solve-common-cms-challenges) 참조 |
+
+_\* 별표는 필수 속성을 나타냅니다._
+
+## 관리자 옵션
+
+[관리자 패널](../admin/overview)에서 날짜 필드의 모양과 동작을 커스터마이징하려면 `admin` 옵션을 사용할 수 있습니다:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyDateField: Field = {
+  // ...
+  admin: {
+    // highlight-line
+    // ...
+  },
+}
+```
+
+날짜 필드는 기본 [필드 관리자 Config](./overview#admin-options)의 모든 기본 관리자 옵션을 상속하며, 다음과 같은 추가 옵션이 있습니다:
+
+| 속성                           | 설명                                                                                                            |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| **`placeholder`**              | 필드의 플레이스홀더 텍스트.                                                                                     |
+| **`date`**                     | 날짜 필드 모양을 커스터마이징하기 위한 옵션을 전달합니다.                                                       |
+| **`date.displayFormat`**       | 필드 **셀**에 표시될 날짜 형식.                                                                                 |
+| **`date.pickerAppearance`** \* | 날짜 선택기의 모양을 결정합니다: `dayAndTime` `timeOnly` `dayOnly` `monthOnly`.                                  |
+| **`date.monthsToShow`** \*     | 표시할 월 수, 최대 2입니다. 기본값은 1입니다.                                                                   |
+| **`date.minDate`** \*          | 허용할 최소 날짜 값.                                                                                            |
+| **`date.maxDate`** \*          | 허용할 최대 날짜 값.                                                                                            |
+| **`date.minTime`** \*          | 허용할 최소 시간 값.                                                                                            |
+| **`date.maxTime`** \*          | 허용할 최대 날짜 값.                                                                                            |
+| **`date.overrides`** \*        | 유효한 속성을 [react-datepicker](https://github.com/Hacker0x01/react-datepicker/blob/master/docs/datepicker.md)에 직접 전달합니다 |
+| **`date.timeIntervals`** \*    | 표시할 시간 간격. 기본값은 30분입니다.                                                                          |
+| **`date.timeFormat`** \*       | 시간 형식을 결정합니다. 기본값은 `'h:mm aa'`입니다.                                                             |
+
+_\* 이 속성은 [react-datepicker](https://github.com/Hacker0x01/react-datepicker/blob/master/docs/datepicker.md)에 직접 전달됩니다._
+
+### 표시 형식 및 선택기 모양
+
+이러한 속성은 UI에서 날짜가 표시되는 방식에만 영향을 줍니다. 전체 날짜는 항상 `YYYY-MM-DDTHH:mm:ss.SSSZ` 형식(예: `1999-01-01T8:00:00.000+05:00`)으로 저장됩니다.
+
+`displayFormat`는 필드 **셀**에서 날짜가 표시되는 방식을 결정하며, 유효한 [유니코드 날짜 형식](https://date-fns.org/v4.1.0/docs/format)을 전달할 수 있습니다.
+
+`pickerAppearance`는 **react datepicker**의 모양을 설정하며, 사용 가능한 옵션은 `dayAndTime`, `dayOnly`, `timeOnly`, `monthOnly`입니다. 기본적으로 날짜 선택기는 `dayOnly`를 표시합니다.
+
+`pickerAppearance`만 설정된 경우 해당하는 형식이 날짜 필드 셀에서 렌더링됩니다. 이 형식을 덮어쓰려면 `displayFormat`을 설정하세요.
+
+## 예제
+
+`collections/ExampleCollection.ts`
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const ExampleCollection: CollectionConfig = {
+  slug: 'example-collection',
+  fields: [
+    {
+      name: 'dateOnly',
+      type: 'date',
+      admin: {
+        date: {
+          pickerAppearance: 'dayOnly',
+          displayFormat: 'd MMM yyy',
+        },
+      },
+    },
+    {
+      name: 'timeOnly',
+      type: 'date',
+      admin: {
+        date: {
+          pickerAppearance: 'timeOnly',
+          displayFormat: 'h:mm:ss a',
+        },
+      },
+    },
+    {
+      name: 'monthOnly',
+      type: 'date',
+      admin: {
+        date: {
+          pickerAppearance: 'monthOnly',
+          displayFormat: 'MMMM yyyy',
+        },
+      },
+    },
+  ],
+}
+```
+
+## 커스텀 컴포넌트
+
+### 필드
+
+#### 서버 컴포넌트
+
+```tsx
+import type React from 'react'
+import { DateTimeField } from '@payloadcms/ui'
+import type { DateFieldServerComponent } from 'payload'
+
+export const CustomDateFieldServer: DateFieldServerComponent = ({
+  clientField,
+  path,
+  schemaPath,
+  permissions,
+}) => {
+  return (
+    <DateTimeField
+      field={clientField}
+      path={path}
+      schemaPath={schemaPath}
+      permissions={permissions}
+    />
+  )
+}
+```
+
+#### 클라이언트 컴포넌트
+
+```tsx
+'use client'
+import React from 'react'
+import { DateTimeField } from '@payloadcms/ui'
+import type { DateFieldClientComponent } from 'payload'
+
+export const CustomDateFieldClient: DateFieldClientComponent = (props) => {
+  return <DateTimeField {...props} />
+}
+```
+
+### 레이블
+
+#### 서버 컴포넌트
+
+```tsx
+import React from 'react'
+import { FieldLabel } from '@payloadcms/ui'
+import type { DateFieldLabelServerComponent } from 'payload'
+
+export const CustomDateFieldLabelServer: DateFieldLabelServerComponent = ({
+  clientField,
+  path,
+}) => {
+  return (
+    <FieldLabel
+      label={clientField?.label || clientField?.name}
+      path={path}
+      required={clientField?.required}
+    />
+  )
+}
+```
+
+#### 클라이언트 컴포넌트
+
+```tsx
+'use client'
+import React from 'react'
+import { FieldLabel } from '@payloadcms/ui'
+import type { DateFieldLabelClientComponent } from 'payload'
+
+export const CustomDateFieldLabelClient: DateFieldLabelClientComponent = ({
+  field,
+  path,
+}) => {
+  return (
+    <FieldLabel
+      label={field?.label || field?.name}
+      path={path}
+      required={field?.required}
+    />
+  )
+}
+```
+
+## 타임존
+
+날짜 필드에서 타임존 선택을 활성화하려면 `timezone` 속성을 `true`로 설정하세요:
+
+```ts
+{
+  name: 'date',
+  type: 'date',
+  timezone: true,
+}
+```
+
+이렇게 하면 사용자가 타임존을 선택할 수 있는 드롭다운이 날짜 선택기에 추가됩니다. 선택된 타임존은 `date_tz`라는 새 열에 날짜와 함께 데이터베이스에 저장됩니다.
+
+[전역 관리자 구성](../admin/overview#timezones)에서 사용 가능한 타임존 목록을 커스터마이징할 수 있습니다.
+
+<Banner type="info">
+  **알아두면 좋은 점:**
+  날짜 자체는 UTC로 저장되므로 프론트엔드에서 날짜를 표시할 때 사용자의 타임존으로 변환하는 것은 사용자의 몫입니다.
+
+특정 시간이 없는 날짜는 선택된 타임존의 12:00으로 정규화됩니다.
+
+</Banner>

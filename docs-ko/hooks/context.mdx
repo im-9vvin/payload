@@ -1,0 +1,139 @@
+---
+title: Context
+label: Context
+order: 50
+desc: Context를 사용하면 hooks 간에 공유할 수 있는 추가 데이터를 전달할 수 있습니다
+keywords: hooks, context, payload context, payloadcontext, data, extra data, shared data, shared, extra
+---
+
+`context` 객체는 다양한 Hooks 간에 데이터를 공유하는 데 사용됩니다. 이것은 요청의 전체 라이프사이클 동안 지속되며 모든 Hook 내에서 사용할 수 있습니다. `req.context`에 속성을 설정하여 여러 Hooks 간에 로직을 효과적으로 공유할 수 있습니다.
+
+## When To Use Context
+
+Context는 다음과 같은 어려운 문제들에 대한 해결책을 제공합니다:
+
+1. **Hooks 간 데이터 전달**: 3rd party API의 데이터가 여러 Hooks에서 필요한 경우, `beforeChange`에서 검색하여 사용하고 나중에 `afterChange` hook에서 두 번 가져올 필요 없이 다시 사용할 수 있습니다.
+2. **무한 루프 방지**: `afterChange` hook을 트리거한 동일한 문서에서 `payload.update()`를 호출하면 무한 루프가 생성되는데, context에 no-op 조건을 할당하여 흐름을 제어할 수 있습니다.
+3. **Local API에 데이터 전달**: `req.context`에 값을 설정하고 이를 `payload.create()`에 전달하여 불필요한 필드를 추가하지 않고도 hooks에 추가 데이터를 제공할 수 있습니다.
+4. **hooks와 middleware 또는 custom endpoints 간 데이터 전달**: Hooks는 여러 collections에 걸쳐 context를 설정하고 최종 `postMiddleware`에서 사용할 수 있습니다.
+
+## How To Use Context
+
+위에서 언급한 처음 두 시나리오에서 context가 어떻게 사용될 수 있는지 예제를 살펴보겠습니다:
+
+### Passing Data Between Hooks
+
+hooks 간에 데이터를 전달하려면 요청 라이프사이클의 이전 hook에서 context에 값을 할당하고 나중 hook의 context에서 이를 기대할 수 있습니다.
+
+예를 들어:```ts
+import type { CollectionConfig } from 'payload'
+
+const Customer: CollectionConfig = {
+  slug: 'customers',
+  hooks: {
+    beforeChange: [
+      async ({ context, data }) => {
+        // 나중에 사용하기 위해 customerData를 context에 할당
+        context.customerData = await fetchCustomerData(data.customerID)
+        return {
+          ...data,
+          // 여기서 사용하는 일부 데이터
+          name: context.customerData.name,
+        }
+      },
+    ],
+    afterChange: [
+      async ({ context, doc, req }) => {
+        // 다시 가져올 필요 없이 context.customerData 사용
+        if (context.customerData.contacted === false) {
+          createTodo('Call Customer', context.customerData)
+        }
+      },
+    ],
+  },
+  fields: [
+    /* ... */
+  ],
+}
+```
+
+### Preventing Infinite Loops
+
+`afterChange` hook이 있고, hook 내에서 계산을 수행하려고 한다고 가정해봅시다 (계산에 필요한 문서 ID가 `afterChange` hook에서는 사용 가능하지만 `beforeChange` hook에서는 사용할 수 없습니다). 완료된 후 계산 결과로 문서를 업데이트하려고 합니다.
+
+나쁜 예:```ts
+import type { CollectionConfig } from 'payload'
+
+const Customer: CollectionConfig = {
+  slug: 'customers',
+  hooks: {
+    afterChange: [
+      async ({ doc, req }) => {
+        await req.payload.update({
+          // 위험: afterChange에서 동일한 slug의 collection을 업데이트하면 무한 루프가 생성됩니다!
+          collection: 'customers',
+          id: doc.id,
+          data: {
+            ...(await fetchCustomerData(data.customerID)),
+          },
+        })
+      },
+    ],
+  },
+  fields: [
+    /* ... */
+  ],
+}
+```
+
+위의 예제 대신, 업데이트를 수행하는 경우 `afterChange` hook이 다시 실행되지 않도록 (따라서 자신을 다시 업데이트하지 않도록) 알려줘야 합니다. context로 이를 해결할 수 있습니다.
+
+수정된 예제:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+const MyCollection: CollectionConfig = {
+  slug: 'slug',
+  hooks: {
+    afterChange: [
+      async ({ context, doc, req }) => {
+        // 플래그가 이전에 설정된 경우 반환
+        if (context.triggerAfterChange === false) {
+          return
+        }
+        await req.payload.update({
+          collection: contextHooksSlug,
+          id: doc.id,
+          data: {
+            ...(await fetchCustomerData(data.customerID)),
+          },
+          context: {
+            // 다시 실행되는 것을 방지하는 플래그 설정
+            triggerAfterChange: false,
+          },
+        })
+      },
+    ],
+  },
+  fields: [
+    /* ... */
+  ],
+}
+```## TypeScript
+
+`context`에 대한 기본 TypeScript 인터페이스는 `{ [key: string]: unknown }`입니다. 프로젝트에서 더 엄격한 타이핑을 선호하거나 다른 사람들을 위한 플러그인을 작성할 때는 `declare module` 구문을 사용하여 이를 재정의할 수 있습니다.
+
+이것은 [module augmentation / declaration merging](https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation)으로 알려진 TypeScript 기능으로, 기존 타입에 속성을 추가할 수 있게 해줍니다. 이를 임의의 `.ts` 또는 `.d.ts` 파일에 넣기만 하면 됩니다:
+
+```ts
+declare module 'payload' {
+  // RequestContext 인터페이스를 확장하여 사용자 정의 속성 포함
+  export interface RequestContext {
+    myObject?: string
+    // ...
+  }
+}
+```
+
+이것은 모든 context 객체에 string 타입의 `myObject` 속성을 추가합니다. 잘못 수행하면 module augmentation이 타입을 망칠 수 있으므로 이 예제를 정확히 따르도록 하세요.

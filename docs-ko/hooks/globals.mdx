@@ -1,0 +1,189 @@
+---
+title: Global Hooks
+label: Globals
+order: 30
+desc: Hooks는 모든 Global에 추가할 수 있으며 데이터 유효성 검사, 로케일 평면화, 보호된 필드 숨기기, 필드 제거 등을 할 수 있게 해줍니다.
+keywords: hooks, globals, config, configuration, documentation, Content Management System, cms, headless, javascript, node, react, nextjs
+---
+
+Global Hooks는 [Global](../configuration/globals) Documents에서 실행되는 [Hooks](./overview)입니다. Document 라이프사이클의 특정 이벤트 중에 자신만의 로직을 실행할 수 있게 해줍니다.
+
+Global에 Hooks를 추가하려면 [Global Config](../configuration/globals)에서 `hooks` 속성을 사용하세요:
+
+```ts
+import type { GlobalConfig } from 'payload'
+
+export const GlobalWithHooks: GlobalConfig = {
+  // ...
+  hooks: {
+    // highlight-line
+    // ...
+  },
+}
+```
+
+<Banner type="info">
+  **팁:** 특정 필드에 hook 로직을 격리시키기 위해 필드 수준에서도 hooks을 설정할 수 있습니다.
+  [자세한 내용](./fields).
+</Banner>
+
+## Config Options
+
+모든 Global Hooks는 [동기 또는 비동기 함수](./overview#async-vs-synchronous) 배열을 받습니다. 각 Global Hook은 자신만의 타입에 기반한 특정 인수를 받으며, 특정 출력을 수정할 수 있는 능력을 가집니다.```ts
+import type { GlobalConfig } from 'payload';
+
+const GlobalWithHooks: GlobalConfig = {
+  // ...
+  // highlight-start
+  hooks: {
+    beforeValidate: [(args) => {...}],
+    beforeChange: [(args) => {...}],
+    beforeRead: [(args) => {...}],
+    afterChange: [(args) => {...}],
+    afterRead: [(args) => {...}],
+  }
+  // highlight-end
+}
+```
+
+### beforeValidate
+
+`update` 작업 중에 실행됩니다. 이 hook을 사용하면 들어오는 데이터가 서버 측에서 유효성 검사되기 전에 데이터를 추가하거나 형식을 지정할 수 있습니다.
+
+이것은 클라이언트 측 유효성 검사 전에는 실행되지 않는다는 점에 유의하세요. 프론트엔드에서 사용자 정의 필드 구성 요소를 렌더링하고 `validate` 함수를 제공하는 경우, 유효성 검사가 실행되는 순서는 다음과 같습니다:
+
+1. `validate`가 클라이언트에서 실행됩니다
+2. 성공하면 `beforeValidate`가 서버에서 실행됩니다
+3. `validate`가 서버에서 실행됩니다
+
+```ts
+import type { GlobalBeforeValidateHook } from 'payload'
+
+const beforeValidateHook: GlobalBeforeValidateHook = async ({
+  data,
+  req,
+  originalDoc,
+}) => {
+  return data
+}
+```
+
+다음 인수들이 `beforeValidate` hook에 제공됩니다:
+
+| Option            | Description                                                                                                                                           |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`global`**      | 이 Hook이 실행되고 있는 [Global](../configuration/globals)입니다.                                                                         |
+| **`context`**     | Hooks 간에 전달되는 사용자 정의 컨텍스트입니다. [자세한 내용](./context).                                                                                       |
+| **`data`**        | 작업을 통해 전달되는 들어오는 데이터입니다.                                                                                                       |
+| **`originalDoc`** | 변경이 적용되기 전의 Document입니다.                                                                                                              |
+| **`req`**         | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다. [Local API](../local-api/overview) 작업의 경우 모의로 처리됩니다. |### beforeChange
+
+유효성 검사 직후에 `beforeChange` hooks는 `update` 작업 내에서 실행됩니다. 이 단계에서 문서에 저장될 데이터가 필드 유효성 검사에 따라 유효하다고 확신할 수 있습니다. 선택적으로 저장될 데이터의 모양을 수정할 수 있습니다.
+
+```ts
+import type { GlobalBeforeChangeHook } from 'payload'
+
+const beforeChangeHook: GlobalBeforeChangeHook = async ({
+  data,
+  req,
+  originalDoc,
+}) => {
+  return data
+}
+```
+
+다음 인수들이 `beforeChange` hook에 제공됩니다:
+
+| Option            | Description                                                                                                                                           |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`global`**      | 이 Hook이 실행되고 있는 [Global](../configuration/globals)입니다.                                                                         |
+| **`context`**     | hooks 간에 전달되는 사용자 정의 컨텍스트입니다. [자세한 내용](./context).                                                                                       |
+| **`data`**        | 작업을 통해 전달되는 들어오는 데이터입니다.                                                                                                       |
+| **`originalDoc`** | 변경이 적용되기 전의 Document입니다.                                                                                                              |
+| **`req`**         | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다. [Local API](../local-api/overview) 작업의 경우 모의로 처리됩니다. |
+
+### afterChange
+
+global이 업데이트된 후 `afterChange` hook이 실행됩니다. 이 hook을 사용하여 애플리케이션의 캐시를 제거하거나, 사이트 데이터를 CRM에 동기화하는 등의 작업을 수행하세요.
+
+```ts
+import type { GlobalAfterChangeHook } from 'payload'
+
+const afterChangeHook: GlobalAfterChangeHook = async ({
+  doc,
+  previousDoc,
+  req,
+}) => {
+  return data
+}
+```
+
+다음 인수들이 `afterChange` hook에 제공됩니다:
+
+| Option            | Description                                                                                                                                           |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`global`**      | 이 Hook이 실행되고 있는 [Global](../configuration/globals)입니다.                                                                         |
+| **`context`**     | hooks 간에 전달되는 사용자 정의 컨텍스트입니다. [자세한 내용](./context).                                                                                       |
+| **`data`**        | 작업을 통해 전달되는 들어오는 데이터입니다.                                                                                                       |
+| **`doc`**         | 변경이 적용된 후의 결과 Document입니다.                                                                                                     |
+| **`previousDoc`** | 변경이 적용되기 전의 Document입니다.                                                                                                             |
+| **`req`**         | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다. [Local API](../local-api/overview) 작업의 경우 모의로 처리됩니다. |### beforeRead
+
+`findOne` global 작업이 `afterRead`에 의해 출력용으로 변환되기 전에 실행됩니다. 이 hook은 숨겨진 필드가 제거되기 전과 지역화된 필드가 요청된 로케일로 평면화되기 전에 실행됩니다. 이 Hook을 사용하면 `doc` 인수를 통해 모든 로케일과 모든 숨겨진 필드에 접근할 수 있습니다.
+
+```ts
+import type { GlobalBeforeReadHook } from 'payload'
+
+const beforeReadHook: GlobalBeforeReadHook = async ({
+  doc,
+  req,
+}) => {...}
+```
+
+다음 인수들이 `beforeRead` hook에 제공됩니다:
+
+| Option        | Description                                                                                                                                           |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`global`**  | 이 Hook이 실행되고 있는 [Global](../configuration/globals)입니다.                                                                         |
+| **`context`** | hooks 간에 전달되는 사용자 정의 컨텍스트입니다. [자세한 내용](./context).                                                                                       |
+| **`doc`**     | 변경이 적용된 후의 결과 Document입니다.                                                                                                     |
+| **`req`**     | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다. [Local API](../local-api/overview) 작업의 경우 모의로 처리됩니다. |
+
+### afterRead
+
+global이 반환되기 전 마지막 단계로 실행됩니다. 로케일을 평면화하고, 보호된 필드를 숨기며, 사용자가 액세스할 수 없는 필드를 제거합니다.
+
+```ts
+import type { GlobalAfterReadHook } from 'payload'
+
+const afterReadHook: GlobalAfterReadHook = async ({
+  doc,
+  req,
+  findMany,
+}) => {...}
+```
+
+다음 인수들이 `beforeRead` hook에 제공됩니다:
+
+| Option         | Description                                                                                                                                           |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`global`**   | 이 Hook이 실행되고 있는 [Global](../configuration/globals)입니다.                                                                         |
+| **`context`**  | hooks 간에 전달되는 사용자 정의 컨텍스트입니다. [자세한 내용](./context).                                                                                       |
+| **`findMany`** | 이 hook이 하나를 찾는 것인지, 여러 개를 찾는 것인지(버전에서 유용함)를 나타내는 Boolean입니다.                                                  |
+| **`doc`**      | 변경이 적용된 후의 결과 Document입니다.                                                                                                     |
+| **`query`**    | 요청의 [Query](../queries/overview)입니다.                                                                                                      |
+| **`req`**      | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다. [Local API](../local-api/overview) 작업의 경우 모의로 처리됩니다. |
+
+## TypeScript
+
+Payload는 각 Global hook에 대한 타입을 내보내며, 다음과 같이 접근할 수 있습니다:
+
+```ts
+import type {
+  GlobalBeforeValidateHook,
+  GlobalBeforeChangeHook,
+  GlobalAfterChangeHook,
+  GlobalBeforeReadHook,
+  GlobalAfterReadHook,
+} from 'payload'
+```

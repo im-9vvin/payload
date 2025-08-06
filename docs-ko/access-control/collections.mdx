@@ -1,0 +1,342 @@
+---
+title: 컬렉션 접근 제어
+label: 컬렉션
+order: 20
+desc: 컬렉션 수준의 접근 제어를 통해 어떤 사용자가 컬렉션을 생성, 읽기, 업데이트 또는 삭제할 수 있는지 정의할 수 있습니다.
+keywords: 컬렉션, 접근 제어, 권한, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+컬렉션 접근 제어는 [컬렉션](../getting-started/concepts#collections) 내의 문서에 대한 접근을 제한하고, 해당 컬렉션과 관련하여 [관리자 패널](../admin/overview) 내에서 볼 수 있는 것과 볼 수 없는 것을 제한하는 데 사용되는 [접근 제어](../access-control/overview)입니다.
+
+컬렉션에 접근 제어를 추가하려면 [컬렉션 구성](../configuration/collections)에서 `access` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithAccessControl: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-line
+    // ...
+  },
+}
+```
+
+## 구성 옵션
+
+접근 제어는 요청의 작업에 따라 구체적입니다.
+
+컬렉션에 접근 제어를 추가하려면 [컬렉션 구성](../configuration/collections)에서 `access` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload';
+
+export const CollectionWithAccessControl: CollectionConfig = {
+  // ...
+  // highlight-start
+  access: {
+    create: () => {...},
+    read: () => {...},
+    update: () => {...},
+    delete: () => {...},
+
+    // 인증이 활성화된 컬렉션만
+    admin: () => {...},
+    unlock: () => {...},
+
+    // 버전이 활성화된 컬렉션만
+    readVersions: () => {...},
+  },
+  // highlight-end
+}
+```
+
+다음 옵션들을 사용할 수 있습니다:
+
+| 함수         | 접근 허용/거부                                                 |
+| ------------ | ------------------------------------------------------------- |
+| **`create`** | `create` 작업에서 사용됩니다. [자세한 내용](#create).             |
+| **`read`**   | `find` 및 `findByID` 작업에서 사용됩니다. [자세한 내용](#read). |
+| **`update`** | `update` 작업에서 사용됩니다. [자세한 내용](#update).             |
+| **`delete`** | `delete` 작업에서 사용됩니다. [자세한 내용](#delete).             |
+
+컬렉션이 [`인증`](../authentication/overview)을 지원하는 경우 다음 추가 옵션을 사용할 수 있습니다:
+
+| 함수         | 접근 허용/거부                                                                           |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| **`admin`**  | [관리자 패널](../admin/overview)에 대한 접근을 제한하는 데 사용됩니다. [자세한 내용](#admin). |
+| **`unlock`** | 어떤 사용자가 `unlock` 작업에 접근할 수 있는지 제한하는 데 사용됩니다. [자세한 내용](#unlock). |
+
+컬렉션이 [버전](../versions/overview)을 지원하는 경우 다음 추가 옵션을 사용할 수 있습니다:
+
+| 함수               | 접근 허용/거부                                                                                                                                   |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`readVersions`** | 누가 버전을 읽을 수 있고 누가 읽을 수 없는지 제어하는 데 사용됩니다. 관리 UI 버전 보기 접근을 자동으로 제한합니다. [자세한 내용](#read-versions). |
+
+### Create
+
+`create` 요청에 대한 접근을 허용/거부하는 boolean을 반환합니다.
+
+컬렉션에 create 접근 제어를 추가하려면 [컬렉션 구성](../configuration/collections)에서 `create` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithCreateAccess: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-start
+    create: ({ req: { user }, data }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+`create` 함수에는 다음 인수가 제공됩니다:
+
+| 옵션       | 설명                                                                                                               |
+| ---------- | ------------------------------------------------------------------------------------------------------------------ |
+| **`req`**  | 현재 인증된 `user`를 포함하는 [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다.        |
+| **`data`** | 문서를 생성하기 위해 전달된 데이터입니다.                                                                            |
+
+### Read
+
+`read` 요청에 대한 접근을 허용/거부하는 boolean을 반환합니다.
+
+컬렉션에 read 접근 제어를 추가하려면 [컬렉션 구성](../configuration/collections)에서 `read` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithReadAccess: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-start
+    read: ({ req: { user } }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+<Banner type="success">
+  **팁:** [쿼리](../queries/overview)를 반환하여 제약 조건과 일치하는 문서만으로
+  제한하세요. 이는 사용자의 특정 문서에 대한 접근을 제한하는 데 도움이 될 수
+  있습니다. [자세한 내용](../queries/overview).
+</Banner>
+
+애플리케이션이 더 복잡해질수록 함수를 별도 파일에 정의하고 컬렉션 구성으로 가져오는 것이 좋습니다:
+
+```ts
+import type { Access } from 'payload'
+
+export const canReadPage: Access = ({ req: { user } }) => {
+  // 인증된 사용자 허용
+  if (user) {
+    return true
+  }
+
+  // 쿼리를 반환하여 게스트 사용자는 공개 문서를 읽을 수 있습니다
+  // 참고: 이는 컬렉션에 `isPublic` 체크박스 필드가 있다고 가정합니다
+  return {
+    isPublic: {
+      equals: true,
+    },
+  }
+}
+```
+
+`read` 함수에는 다음 인수가 제공됩니다:
+
+| 옵션      | 설명                                                                                                               |
+| --------- | ------------------------------------------------------------------------------------------------------------------ |
+| **`req`** | 현재 인증된 `user`를 포함하는 [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다.        |
+| **`id`**  | `findByID` 내에서 요청된 문서의 `id`입니다.                                                                         |
+
+### Update
+
+`update` 요청에 대한 접근을 허용/거부하는 boolean을 반환합니다.
+
+컬렉션에 update 접근 제어를 추가하려면 [컬렉션 구성](../configuration/collections)에서 `update` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithUpdateAccess: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-start
+    update: ({ req: { user } }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+<Banner type="success">
+  **팁:** [쿼리](../queries/overview)를 반환하여 제약 조건과 일치하는 문서만으로
+  제한하세요. 이는 사용자의 특정 문서에 대한 접근을 제한하는 데 도움이 될 수
+  있습니다. [자세한 내용](../queries/overview).
+</Banner>
+
+애플리케이션이 더 복잡해질수록 함수를 별도 파일에 정의하고 컬렉션 구성으로 가져오는 것이 좋습니다:
+
+```ts
+import type { Access } from 'payload'
+
+export const canUpdateUser: Access = ({ req: { user }, id }) => {
+  // 'admin' 역할을 가진 사용자 허용
+  if (user.roles && user.roles.some((role) => role === 'admin')) {
+    return true
+  }
+
+  // 다른 사용자는 자신만 업데이트할 수 있도록 허용
+  return user.id === id
+}
+```
+
+`update` 함수에는 다음 인수가 제공됩니다:
+
+| 옵션       | 설명                                                                                                               |
+| ---------- | ------------------------------------------------------------------------------------------------------------------ |
+| **`req`**  | 현재 인증된 `user`를 포함하는 [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다.        |
+| **`id`**   | 업데이트를 요청한 문서의 `id`입니다.                                                                               |
+| **`data`** | 문서를 업데이트하기 위해 전달된 데이터입니다.                                                                        |
+
+### Delete
+
+Update 함수와 유사하게 boolean 또는 [쿼리 제약 조건](/docs/queries/overview)을 반환하여 어떤 사용자가 어떤 문서를 삭제할 수 있는지 제한합니다.
+
+컬렉션에 delete 접근 제어를 추가하려면 [컬렉션 구성](../configuration/collections)에서 `delete` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithDeleteAccess: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-start
+    delete: ({ req: { user } }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+애플리케이션이 더 복잡해질수록 함수를 별도 파일에 정의하고 컬렉션 구성으로 가져오는 것이 좋습니다:
+
+```ts
+import type { Access } from 'payload'
+
+export const canDeleteCustomer: Access = async ({ req, id }) => {
+  if (!id) {
+    // `id` 없이는 결정할 수 없으므로 관리 UI가 삭제 컨트롤을 표시하도록 허용
+    return true
+  }
+
+  // `id`를 사용하여 다른 컬렉션을 쿼리
+  const result = await req.payload.find({
+    collection: 'contracts',
+    limit: 0,
+    depth: 0,
+    where: {
+      customer: { equals: id },
+    },
+  })
+
+  return result.totalDocs === 0
+}
+```
+
+`delete` 함수에는 다음 인수가 제공됩니다:
+
+| 옵션      | 설명                                                                                                                             |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **`req`** | 현재 로그인한 사용자인 추가 `user` 속성을 가진 [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다. |
+| **`id`**  | 삭제를 요청한 문서의 `id`입니다.                                                                                                |
+
+### Admin
+
+컬렉션이 [관리자 패널](../admin/overview#the-admin-user-collection)에 접근하는 데 사용되는 경우, `Admin` 접근 제어 함수는 현재 로그인한 사용자가 관리 UI에 접근할 수 있는지 여부를 결정합니다.
+
+컬렉션에 Admin 접근 제어를 추가하려면 [컬렉션 구성](../configuration/collections)에서 `admin` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithAdminAccess: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-start
+    admin: ({ req: { user } }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+`admin` 함수에는 다음 인수가 제공됩니다:
+
+| 옵션      | 설명                                                                                                               |
+| --------- | ------------------------------------------------------------------------------------------------------------------ |
+| **`req`** | 현재 인증된 `user`를 포함하는 [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다.        |
+
+### Unlock
+
+[로그인 시도 실패가 너무 많아](/docs/authentication/overview#config-options) 인증에 성공하지 못해 차단된 다른 사용자를 [잠금 해제](/docs/authentication/operations#unlock)할 수 있는 사용자를 결정합니다.
+
+컬렉션에 Unlock 접근 제어를 추가하려면 [컬렉션 구성](../configuration/collections)에서 `unlock` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithUnlockAccess: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-start
+    unlock: ({ req: { user } }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+`unlock` 함수에는 다음 인수가 제공됩니다:
+
+| 옵션      | 설명                                                                                                               |
+| --------- | ------------------------------------------------------------------------------------------------------------------ |
+| **`req`** | 현재 인증된 `user`를 포함하는 [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다.        |
+
+### Read Versions
+
+컬렉션에 [버전](../versions/overview)이 활성화되어 있는 경우, `readVersions` 접근 제어 함수는 현재 로그인한 사용자가 문서의 버전 기록에 접근할 수 있는지 여부를 결정합니다.
+
+컬렉션에 Read Versions 접근 제어를 추가하려면 [컬렉션 구성](../configuration/collections)에서 `readVersions` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithVersionsAccess: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-start
+    readVersions: ({ req: { user } }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+`readVersions` 함수에는 다음 인수가 제공됩니다:
+
+| 옵션      | 설명                                                                                                               |
+| --------- | ------------------------------------------------------------------------------------------------------------------ |
+| **`req`** | 현재 인증된 `user`를 포함하는 [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 객체입니다.        |

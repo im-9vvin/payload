@@ -1,0 +1,193 @@
+---
+title: 설치
+label: 설치
+order: 30
+desc: Payload를 빠르게 시작하려면 npx create-payload-app을 실행하거나 처음부터 설치하세요.
+keywords: 문서, 시작하기, 가이드, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+## 소프트웨어 요구사항
+
+Payload는 다음 소프트웨어가 필요합니다:
+
+- 모든 JavaScript 패키지 매니저 (pnpm, npm, 또는 yarn - pnpm 권장)
+- Node.js 버전 20.9.0+
+- 모든 [호환 가능한 데이터베이스](/docs/database/overview) (MongoDB, Postgres 또는 SQLite)
+
+<Banner type="warning">
+  **중요:** 더 진행하기 전에 위의 요구사항을 충족했는지 확인하세요.
+</Banner>
+
+## create-payload-app으로 빠른 시작
+
+가능한 가장 빠른 방법으로 새 Payload 앱을 빠르게 구축하려면 [create-payload-app](https://npmjs.com/package/create-payload-app)을 사용할 수 있습니다. 이를 위해 다음 명령을 실행하세요:
+
+```
+npx create-payload-app
+```
+
+그런 다음 프롬프트를 따라가세요! 새 폴더와 그 안에 작동하는 Payload 앱이 설정됩니다. 그런 다음 [애플리케이션 구성](../configuration/overview)을 시작할 수 있습니다.
+
+## 기존 앱에 추가하기
+
+기존 Next.js 앱에 Payload를 추가하는 것은 매우 간단합니다. Next.js 프로젝트 폴더 내에서 `npx create-payload-app` 명령을 실행하거나 아래 단계를 따라 수동으로 Payload를 설치할 수 있습니다.
+
+아직 Next.js 앱이 없지만 빈 Next.js 앱에서 프로젝트를 시작하고 싶다면 `npx create-next-app`을 사용하여 새 Next.js 앱을 만들 수 있습니다 - 그런 다음 아래 단계를 따라 Payload를 설치하세요.
+
+<Banner type="info">
+  **참고:** Payload에는 Next.js 버전 15 이상이 필요합니다.
+</Banner>
+
+#### 1. 관련 패키지 설치
+
+먼저 프로젝트에 필요한 Payload 패키지를 추가해야 하며 아래 명령을 실행하여 수행할 수 있습니다:
+
+```bash
+pnpm i payload @payloadcms/next @payloadcms/richtext-lexical sharp graphql
+```
+
+<Banner type="warning">
+  **참고:** `pnpm`을 패키지 매니저로 교체하세요. npm을 사용하는 경우 레거시
+  피어 종속성을 사용하여 설치해야 할 수 있습니다: `npm i --legacy-peer-deps`.
+</Banner>
+
+다음으로 [데이터베이스 어댑터](/docs/database/overview)를 설치합니다. Payload는 데이터베이스 연결을 설정하기 위해 데이터베이스 어댑터가 필요합니다. Payload는 모든 유형의 데이터베이스에서 작동하지만 가장 일반적인 것은 MongoDB와 Postgres입니다.
+
+데이터베이스 어댑터를 설치하려면 다음 명령 중 **하나**를 실행할 수 있습니다:
+
+- [MongoDB 어댑터](../database/mongodb)를 설치하려면 다음을 실행하세요:
+
+  ```bash
+  pnpm i @payloadcms/db-mongodb
+  ```
+
+- [Postgres 어댑터](../database/postgres)를 설치하려면 다음을 실행하세요:
+
+  ```bash
+  pnpm i @payloadcms/db-postgres
+  ```
+
+- [SQLite 어댑터](../database/sqlite)를 설치하려면 다음을 실행하세요:
+  ```bash
+  pnpm i @payloadcms/db-sqlite
+  ```
+
+<Banner type="success">
+  **참고:** 새로운 [데이터베이스 어댑터](/docs/database/overview)가 매일
+  제공됩니다. 사용 가능한 최신 목록은 문서를 확인하세요.
+</Banner>
+
+#### 2. Payload 파일을 Next.js 앱 폴더에 복사
+
+Payload는 Next.js `/app` 폴더에 직접 설치되며, Payload가 실행되려면 해당 폴더에 일부 파일을 배치해야 합니다. GitHub의 [빈 템플릿](<https://github.com/payloadcms/payload/tree/main/templates/blank/src/app/(payload)>)에서 이러한 파일을 복사할 수 있습니다. `/app` 폴더에 필요한 Payload 파일을 배치하면 다음과 같은 구조가 됩니다:
+
+```plaintext
+app/
+├─ (payload)/
+├── // Payload 파일
+├─ (my-app)/
+├── // 앱 파일
+```
+
+_`(payload)` 디렉토리의 정확한 참조는 [프로젝트 구조](../admin/overview#project-structure)를 참조하세요._
+
+<Banner type="warning">
+  기존 루트 레이아웃을 포함하여 모든 기존 프론트엔드 파일을 새로 생성된
+  [라우트
+  그룹](https://nextjs.org/docs/app/building-your-application/routing/route-groups),
+  즉 `(my-app)`에 복사해야 할 수 있습니다.
+</Banner>
+
+Payload가 `/app` 폴더에 있어야 하는 파일은 재생성되지 않으며 변경되지 않습니다. 한 번 배치하면 다시 방문할 필요가 없습니다. 이들은 편집하기 위한 것이 아니며 단순히 REST/GraphQL API 및 관리자 패널을 위해 `@payloadcms/next`에서 Payload 종속성을 가져옵니다.
+
+`(my-app)` 폴더의 이름은 원하는 대로 지을 수 있습니다. 이름은 중요하지 않으며 디렉토리 구조를 명확히 하는 데만 사용됩니다. 일반적인 이름은 `(frontend)`, `(app)` 또는 유사한 것입니다. [자세한 내용](../admin/overview).
+
+#### 3. Next.js 설정에 Payload 플러그인 추가
+
+Payload에는 `mongodb` 또는 `drizzle-kit`과 같이 Payload가 의존하는 일부 패키지와의 호환성을 보장하는 데 사용하는 Next.js 플러그인이 있습니다.
+
+Payload 플러그인을 추가하려면 `next.config.js`에서 `withPayload`를 사용하세요:
+
+```js
+import { withPayload } from '@payloadcms/next/withPayload'
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // 여기에 Next.js 설정
+  experimental: {
+    reactCompiler: false,
+  },
+}
+
+// `nextConfig`를 `withPayload` 플러그인으로
+// 래핑해야 합니다
+export default withPayload(nextConfig) // highlight-line
+```
+
+<Banner type="warning">
+  **중요:** Payload는 완전한 ESM 프로젝트이며, 이는 `withPayload` 함수가
+  ECMAScript 모듈임을 의미합니다.
+</Banner>
+
+Payload 플러그인을 가져오려면 `next.config` 파일이 ESM을 사용하도록 설정되어 있는지 확인해야 합니다.
+
+다음 두 가지 방법 중 하나로 이를 수행할 수 있습니다:
+
+1. `package.json` 파일에 `"type": "module"`을 추가하여 자체 프로젝트가 ESM을 사용하도록 설정
+2. Next.js 설정에 `.mjs` 파일 확장자 부여
+
+두 경우 모두 `next.config` 파일의 모든 `require`와 `export`는 아직 설정되지 않은 경우 `import` / `export`로 변환해야 합니다.
+
+#### 4. Payload Config 생성 및 TypeScript 설정에 추가
+
+마지막으로 [Payload Config](../configuration/overview)를 생성해야 합니다. 일반적으로 Payload Config는 저장소의 루트 또는 `/app` 폴더 옆에 위치하며 `payload.config.ts`라는 이름을 가집니다.
+
+다음은 Payload가 최소한으로 필요로 하는 것입니다:
+
+```ts
+import sharp from 'sharp'
+import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { mongooseAdapter } from '@payloadcms/db-mongodb'
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // 리치 텍스트를 사용하려면 여기에 에디터를 전달하세요
+  editor: lexicalEditor(),
+
+  // 이 배열에서 컬렉션을 정의하고 구성하세요
+  collections: [],
+
+  // Payload 시크릿 - 복잡하고 안전한 문자열이어야 하며 추측할 수 없어야 합니다
+  secret: process.env.PAYLOAD_SECRET || '',
+  // 사용 중인 데이터베이스 어댑터가 여기에 있어야 합니다
+  // Mongoose가 예제로 표시되지만 Postgres도 사용할 수 있습니다
+  db: mongooseAdapter({
+    url: process.env.DATABASE_URI || '',
+  }),
+  // 이미지 크기 조정, 자르기, 초점 설정 등을 하려면
+  // 설치하고 설정에 전달해야 합니다.
+  // 이것은 선택 사항입니다 - 이러한 작업이 필요하지 않다면
+  // 필요하지 않습니다!
+  sharp,
+})
+```
+
+이것은 최소한의 설정일 뿐이지만 여기서 제어할 수 있는 _훨씬 더 많은_ 옵션이 있습니다. 전체 설정과 모든 옵션을 참조하려면 [여기를 클릭하세요](/docs/configuration/overview).
+
+Payload Config가 있으면 `tsconfig`를 업데이트하여 이를 가리키는 `path`를 포함하세요:
+
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "@payload-config": ["./payload.config.ts"]
+    }
+  }
+}
+```
+
+#### 5. 실행하세요!
+
+이 시점에 도달했다면 Payload를 부팅할 시간입니다. 애플리케이션 폴더에서 프로젝트를 시작하여 진행하세요. 기본적으로 Next.js 개발 스크립트는 `pnpm dev`입니다 (npm을 사용하는 경우 `npm run dev`).
+
+시작 후 `http://localhost:3000/admin`으로 이동하여 첫 번째 Payload 사용자를 생성할 수 있습니다!

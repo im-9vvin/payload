@@ -1,0 +1,199 @@
+---
+title: 서버 측 라이브 미리보기
+label: 서버 측
+order: 30
+desc: 서버 측 프론트엔드 애플리케이션에서 라이브 미리보기를 구현하는 방법을 알아보세요.
+keywords: live preview, frontend, react, next.js, vue, nuxt.js, svelte, hook, useLivePreview
+---
+
+<Banner type="info">
+  서버 측 라이브 미리보기는 [React 서버
+  컴포넌트](https://react.dev/reference/rsc/server-components)와 같은
+  서버 컴포넌트 개념을 지원하는 프론트엔드 프레임워크에만 적용됩니다.
+  프론트엔드 애플리케이션이 [Next.js
+  Pages Router](https://nextjs.org/docs/pages), [React
+  Router](https://reactrouter.com), [Vue 3](https://vuejs.org) 등과 같은
+  클라이언트 측 프레임워크로 구축된 경우, 
+  [클라이언트 측 라이브 미리보기](./client)를 참조하세요.
+</Banner>
+
+서버 측 라이브 미리보기는 문서가 저장될 때마다(즉, 초안 저장, 자동 저장 또는 게시) 서버로 왕복 요청을 만드는 방식으로 작동합니다. 라이브 미리보기를 사용하는 동안 관리자 패널은 프론트엔드 애플리케이션이 이 프로세스를 호출하는 데 사용할 수 있는 새로운 `window.postMessage` 이벤트를 발생시킵니다. Next.js에서는 단순히 `router.refresh()`를 호출하는 것을 의미하며, 이는 [로컬 API](../local-api/overview)에서 직접 새 데이터를 사용하여 HTML을 하이드레이트합니다.
+
+<Banner type="warning">
+  경험을 더 반응성 있게 만들기 위해 라이브 미리보기와 함께 
+  [자동 저장](../versions/autosave)을 활성화하는 것을 권장합니다.
+</Banner>
+
+프론트엔드 애플리케이션이 [React](#react)로 구축된 경우, Payload가 제공하는 `RefreshRouteOnChange` 함수를 사용할 수 있습니다. 향후 Vue 및 Svelte와 같은 다른 주요 프레임워크들도 공식적으로 지원될 예정입니다. 현재 이러한 프레임워크를 사용하고 있다면, Payload가 제공하는 기본 도구를 사용하여 직접 라이브 미리보기와 통합할 수 있습니다. 자세한 내용은 [자체 라우터 새로 고침 컴포넌트 구축](#자체-라우터-새로-고침-컴포넌트-구축)을 참조하세요.
+
+## React
+
+프론트엔드 애플리케이션이 [Next.js App Router](https://nextjs.org/docs/app)와 같은 서버 측 [React](https://react.dev)로 구축된 경우, Payload가 제공하는 `RefreshRouteOnSave` 컴포넌트를 사용할 수 있습니다.
+
+먼저 `@payloadcms/live-preview-react` 패키지를 설치하세요:```bash
+npm install @payloadcms/live-preview-react
+```
+
+그런 다음 `page.tsx`의 어디에서나 `RefreshRouteOnSave` 컴포넌트를 렌더링하세요. 예시는 다음과 같습니다:
+
+`page.tsx`:
+
+```tsx
+import { RefreshRouteOnSave } from './RefreshRouteOnSave.tsx'
+import { getPayload } from 'payload'
+import config from '../payload.config'
+
+export default async function Page() {
+  const payload = await getPayload({ config })
+
+  const page = await payload.findByID({
+    collection: 'pages',
+    id: '123',
+    draft: true,
+    trash: true, // 컬렉션에서 trash가 활성화되어 있고 삭제된 문서를 미리보기하려면 추가
+  })
+
+  return (
+    <Fragment>
+      <RefreshRouteOnSave />
+      <h1>{page.title}</h1>
+    </Fragment>
+  )
+}
+```
+
+`RefreshRouteOnSave.tsx`:
+
+```tsx
+'use client'
+import { RefreshRouteOnSave as PayloadLivePreview } from '@payloadcms/live-preview-react'
+import { useRouter } from 'next/navigation.js'
+import React from 'react'
+
+export const RefreshRouteOnSave: React.FC = () => {
+  const router = useRouter()
+
+  return (
+    <PayloadLivePreview
+      refresh={() => router.refresh()}
+      serverURL={process.env.NEXT_PUBLIC_PAYLOAD_URL}
+    />
+  )
+}
+```
+
+## 자체 라우터 새로 고침 컴포넌트 구축
+
+어떤 프론트엔드 프레임워크를 사용하든, Payload가 제공하는 동일한 기본 도구를 사용하여 자체 컴포넌트를 구축할 수 있습니다.
+
+먼저 기본 `@payloadcms/live-preview` 패키지를 설치하세요:
+
+```bash
+npm install @payloadcms/live-preview
+```
+
+이 패키지는 다음 함수들을 제공합니다:
+
+| 경로                  | 설명                                                                                                                          |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`ready`**           | 프론트엔드가 메시지를 받을 준비가 되었음을 관리자 패널에 알리는 `window.postMessage` 이벤트를 보냅니다.                     |
+| **`isDocumentEvent`** | `MessageEvent`가 관리자 패널에서 발생하며 문서 레벨 이벤트인지(즉, 초안 저장, 자동 저장, 게시 등) 확인합니다. |
+
+이 함수들로 원하는 프론트엔드 프레임워크를 사용하여 자체 훅을 구축할 수 있습니다:
+
+```tsx
+import { ready, isDocumentEvent } from '@payloadcms/live-preview'
+
+// 자체 컴포넌트를 구축하려면:
+// 1. 관리자 패널에서 보낸 문서 레벨 `window.postMessage` 이벤트를 수신
+// 2. 관리자 패널에 메시지를 받을 준비가 되었음을 알리기
+// 3. 새 문서 레벨 이벤트를 받을 때마다 라우트 새로 고침
+// 4. 언마운트 시 `window.postMessage` 이벤트 구독 해제
+```
+
+다음은 위의 동일한 `RefreshRouteOnSave` React 컴포넌트가 내부적으로 어떻게 생겼는지의 예시입니다:
+
+```tsx
+'use client'
+
+import type React from 'react'
+
+import { isDocumentEvent, ready } from '@payloadcms/live-preview'
+import { useCallback, useEffect, useRef } from 'react'
+
+export const RefreshRouteOnSave: React.FC<{
+  apiRoute?: string
+  depth?: number
+  refresh: () => void
+  serverURL: string
+}> = (props) => {
+  const { apiRoute, depth, refresh, serverURL } = props
+  const hasSentReadyMessage = useRef<boolean>(false)
+
+  const onMessage = useCallback(
+    (event: MessageEvent) => {
+      if (isDocumentEvent(event, serverURL)) {
+        if (typeof refresh === 'function') {
+          refresh()
+        }
+      }
+    },
+    [refresh, serverURL],
+  )
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('message', onMessage)
+    }
+
+    if (!hasSentReadyMessage.current) {
+      hasSentReadyMessage.current = true
+
+      ready({
+        serverURL,
+      })
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('message', onMessage)
+      }
+    }
+  }, [serverURL, onMessage, depth, apiRoute])
+
+  return null
+}
+```
+
+## 예시
+
+이에 대한 작동 데모는 공식 [라이브 미리보기 예시](https://github.com/payloadcms/payload/tree/main/examples/live-preview)를 확인하세요. 거기서 Next.js App Router 애플리케이션에서 라이브 미리보기를 구현하는 방법의 완전히 작동하는 예시를 찾을 수 있습니다.
+
+## 문제 해결
+
+#### 업데이트가 클라이언트 측 라이브 미리보기만큼 빠르게 나타나지 않음
+
+업데이트가 클라이언트 측 라이브 미리보기(즉, `useLivePreview` 훅)보다 덜 반응적으로 느껴진다면, 이는 두 방식의 작동 방식이 다르기 때문입니다—_폼 상태_에 대해 이벤트를 발생시키는 대신, 서버 측 라이브 미리보기는 새 문서가 _저장된_ 후 라우트를 새로 고침합니다.
+
+서버 측에서 이 효과를 모방하려면 [자동 저장](../versions/autosave)을 사용하세요. 경험을 더 반응성 있게 만들기 위해 `versions.autoSave.interval` 값을 줄여보세요:
+
+```ts
+// collection.ts
+{
+   versions: {
+    drafts: {
+      autosave: {
+        interval: 375,
+      },
+    },
+  },
+}
+```
+
+#### iframe이 연결을 거부함
+
+프론트엔드 애플리케이션이 관리자 패널이 프론트엔드 애플리케이션을 로드하는 것을 차단하는 [콘텐츠 보안 정책](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP) (CSP)을 설정한 경우, iframe이 사이트를 로드할 수 없습니다. 이를 해결하려면 `frame-ancestors` 지시문을 설정하여 CSP에서 관리자 패널의 도메인을 화이트리스트에 추가할 수 있습니다:
+
+```plaintext
+frame-ancestors: "self" localhost:* https://your-site.com;
+```

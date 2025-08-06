@@ -1,0 +1,91 @@
+---
+title: Jobs Queue
+label: Overview
+order: 10
+desc: Payload는 긴 실행 프로세스를 별도의 워커로 오프로드하는 데 도움이 되는 job queues를 실행하는 데 필요한 모든 것을 제공합니다.
+keywords: jobs queue, application framework, typescript, node, react, nextjs
+---
+
+Payload의 Jobs Queue는 대규모 또는 미래의 작업을 별도의 컴퓨팅 리소스로 오프로드하는 간단하면서도 강력한 방법을 제공하며, 이는 많은 애플리케이션 프레임워크의 매우 강력한 기능입니다.
+
+### 사용 사례 예시
+
+**Non-blocking 워크로드**
+
+Payload [Hook](/docs/hooks/overview)에서 복잡하고 실행 시간이 긴 로직을 수행해야 하지만 해당 hook이 Payload API에서 반환되는 응답을 "차단"하거나 느리게 하고 싶지 않을 수 있습니다. 비용이 많이 드는 작업이 완료될 때까지 API 응답 반환을 차단하는 hook에서 직접 이 로직을 실행하는 대신, 새로운 Job을 대기열에 추가하고 나중에 실행하도록 할 수 있습니다.
+
+예시:
+
+- 문서에서 벡터 임베딩을 생성하고 문서가 변경될 때 동기화 상태를 유지
+- 문서 변경 시 타사 API로 데이터 전송
+- 고객 행동에 기반한 이메일 트리거
+
+**예약된 액션**
+
+미래의 특정 날짜에 실행되거나 처리될 액션을 예약해야 하는 경우, `waitUntil` 속성이 설정된 job을 대기열에 추가할 수 있습니다. 이렇게 하면 해당 `waitUntil` 날짜가 지날 때까지 job이 "선택"되지 않습니다.
+
+예시:
+
+- 예약된 날짜가 미래 시간으로 설정된 예약 게시물 처리
+- 특정 시간에 게시물 게시 취소
+- 평가판 가입 후 X일 후 고객에게 알림 이메일 전송
+
+**주기적 동기화 또는 유사한 예약된 액션**
+
+일부 애플리케이션은 정기적으로 예약된 어떤 유형의 작업을 수행해야 할 수 있습니다. Jobs는 `cron`, 야간 예약, 12시간마다 또는 유사한 시간 주기를 사용하여 로직을 실행할 수 있기 때문에 이에 완벽합니다.
+
+예시:
+
+- 모든 고객에게 정기적으로 예약된 기준에 따라 이메일 전송
+- 밤에 주기적으로 프론트엔드 재빌드 트리거
+- 비피크 시간 동안 타사 API와 리소스 동기화**복잡한 작업 오프로드**
+
+메인 Payload API 서버를 느리게 할 수 있는 계산 집약적인 함수를 수행해야 하는 상황에 직면할 수 있습니다. Jobs Queue를 사용하면 Payload API를 실행하는 서버를 느리게 하지 않고 이러한 작업을 별도의 컴퓨팅 리소스로 오프로드할 수 있습니다. Payload Task 정의를 사용하면 사용될 때만 동적으로 임포트하여 메인 Next.js 번들에서 큰 의존성을 제외할 수도 있습니다. 이는 Next.js + Payload 컴파일을 빠르게 유지하고 큰 의존성이 Payload 프로덕션 빌드에 번들되지 않도록 합니다.
+
+예시:
+
+- 문서가 변경될 때 문서의 벡터 임베딩을 생성하고 동기화 상태를 유지해야 하지만 오픈 소스 모델을 사용하여 임베딩을 생성하는 경우
+- 고객에게 문서의 PDF 버전을 동적으로 빌드하고 전송해야 하는 PDF 생성기가 있는 경우
+- 일부 유형의 로직을 수행하기 위해 헤드리스 브라우저를 사용해야 하는 경우
+- 각각이 이전 작업에 의존하고 가능한 한 "내구성" 있는 방식으로 실행되어야 하는 일련의 작업을 수행해야 하는 경우
+
+### 작동 방식
+
+Payload의 Jobs Queue를 사용하기 전에 익숙해져야 할 몇 가지 개념이 있습니다. Payload의 Jobs Queue의 힘을 완전히 활용하는 방법을 이해하기 위해 각각이 무엇을 하는지 순서대로 배우는 것을 권장합니다.
+
+1. [Tasks](/docs/jobs-queue/tasks)
+2. [Workflows](/docs/jobs-queue/workflows)
+3. [Jobs](/docs/jobs-queue/jobs)
+4. [Queues](/docs/jobs-queue/queues)
+
+이 모든 요소들이 함께 작동하여 메인 API에서 장시간 실행되거나, 비용이 많이 들거나, 미래에 예약된 작업을 오프로드할 수 있게 해줍니다.
+
+간략한 개요는 다음과 같습니다:
+
+- Task는 비즈니스 로직을 수행하는 특정 함수입니다
+- Workflows는 순서대로 실행되어야 하는 특정 작업들의 그룹이며, 특정 실패 지점에서 재시도할 수 있습니다
+- Job은 실행될 단일 작업 또는 워크플로의 인스턴스입니다
+- Queue는 작업을 다른 "그룹"으로 분할하는 방법입니다 - 예를 들어, 일부는 야간에 실행하고 다른 일부는 10분마다 실행하는 것입니다
+
+### Admin UI에서 Jobs 시각화
+
+기본적으로 내부 `payload-jobs` collection은 Payload Admin Panel에서 숨겨집니다. 디버깅 또는 검사 목적으로 이 collection을 보이게 하려면 `jobsCollectionOverrides`를 사용하여 구성을 재정의할 수 있습니다.
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ... other config
+  jobs: {
+    // ... other job settings
+    jobsCollectionOverrides: ({ defaultJobsCollection }) => {
+      if (!defaultJobsCollection.admin) {
+        defaultJobsCollection.admin = {}
+      }
+
+      defaultJobsCollection.admin.hidden = false
+      return defaultJobsCollection
+    },
+  },
+})
+```

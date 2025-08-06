@@ -1,0 +1,563 @@
+---
+title: Edit View
+label: Edit View
+order: 60
+desc:
+keywords: admin, components, custom, documentation, Content Management System, cms, headless, javascript, node, react, nextjs
+---
+
+Edit View는 사용자가 [Admin Panel](../admin/overview) 내에서 개별 [Collection](../configuration/collections) 및 [Global](../configuration/globals) Documents와 상호 작용하는 곳입니다. Edit View는 서버로 데이터를 제출하는 실제 양식을 포함합니다. 여기서 콘텐츠를 보고, 편집하고, 저장할 수 있습니다. 문서 저장, 게시 및 미리보기를 위한 컨트롤이 포함되어 있으며, 이 모든 것이 높은 수준으로 사용자 정의될 수 있습니다.
+
+Edit View는 전체를 Custom View로 교체하거나, 전체 뷰를 교체하지 않고 추가 기능이나 표현 요소를 추가하기 위해 여러 Custom Components를 주입할 수 있습니다.
+
+<Banner type="warning">
+  **참고:** Edit View는 Payload Admin Panel의 많은 [Document Views](./document-views) 중
+  하나입니다. 각 Document View는 단일 Document와의 상호 작용의 다른 측면을
+  담당합니다.
+</Banner>
+
+## Custom Edit View
+
+전체 Edit View를 [Custom View](./custom-views)로 교체하려면 [Collection Config](../configuration/collections) 또는 [Global Config](../configuration/globals)에서 `views.edit.default` 속성을 사용하세요:
+
+```tsx
+import { buildConfig } from 'payload'
+
+const config = buildConfig({
+  // ...
+  admin: {
+    components: {
+      views: {
+        edit: {
+          // highlight-start
+          default: {
+            Component: '/path/to/MyCustomEditViewComponent',
+          },
+          // highlight-end
+        },
+      },
+    },
+  },
+})
+```
+
+다음은 사용자 정의 Edit View의 예입니다:#### Server Component
+
+```tsx
+import React from 'react'
+import type { DocumentViewServerProps } from 'payload'
+
+export function MyCustomServerEditView(props: DocumentViewServerProps) {
+  return <div>This is a custom Edit View (Server)</div>
+}
+```
+
+#### Client Component
+
+```tsx
+'use client'
+import React from 'react'
+import type { DocumentViewClientProps } from 'payload'
+
+export function MyCustomClientEditView(props: DocumentViewClientProps) {
+  return <div>This is a custom Edit View (Client)</div>
+}
+```
+
+_사용 가능한 모든 props를 포함한 Custom Views 구축에 대한 자세한 내용은 [Building Custom Views](./custom-views#building-custom-views)를 참조하세요._
+
+## Custom Components
+
+전체 Edit View를 [Custom View](./custom-views)로 교체하는 것 외에도 개별 구성 요소를 재정의할 수도 있습니다. 이를 통해 전체 뷰를 교체하지 않고도 Edit View의 특정 부분을 사용자 정의할 수 있습니다.
+
+<Banner type="warning">
+  **중요:** Collection과 Globals는 `admin.components` 객체의 다른 속성에
+  키가 지정되어 있으며 약간 다른 옵션을 가지고 있습니다. 작업 중인 엔터티에
+  올바른 키를 사용해야 합니다.
+</Banner>
+
+#### Collections
+
+Collection의 Edit View 구성 요소를 재정의하려면 [Collection Config](../configuration/collections)에서 `admin.components.edit` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  // ...
+  admin: {
+    components: {
+      // highlight-start
+      edit: {
+        // ...
+      },
+      // highlight-end
+    },
+  },
+}
+```
+
+다음 옵션을 사용할 수 있습니다:
+
+| Path                     | Description                                                                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `beforeDocumentControls` | Save / Publish 버튼 앞에 사용자 정의 구성 요소를 주입합니다. [자세한 내용](#beforedocumentcontrols).                         |
+| `editMenuItems`          | 문서 컨트롤 바에 있는 3점 메뉴 드롭다운 내에 사용자 정의 구성 요소를 주입합니다. [자세한 내용](#editmenuitems). |
+| `SaveButton`             | 현재 문서를 저장하는 버튼입니다. [자세한 내용](#savebutton).                                                       |
+| `SaveDraftButton`        | 현재 문서를 초안으로 저장하는 버튼입니다. [자세한 내용](#savedraftbutton).                                       |
+| `PublishButton`          | 현재 문서를 게시하는 버튼입니다. [자세한 내용](#publishbutton).                                                |
+| `PreviewButton`          | 현재 문서를 미리 보는 버튼입니다. [자세한 내용](#previewbutton).                                                 |
+| `Description`            | Collection의 설명입니다. [자세한 내용](#description).                                                               |
+| `Upload`                 | 파일 업로드 구성 요소입니다. [자세한 내용](#upload).                                                                            |#### Globals
+
+Globals의 Edit View 구성 요소를 재정의하려면 [Global Config](../configuration/globals)에서 `admin.components.elements` 속성을 사용하세요:
+
+```ts
+import type { GlobalConfig } from 'payload'
+
+export const MyGlobal: GlobalConfig = {
+  // ...
+  admin: {
+    components: {
+      // highlight-start
+      elements: {
+        // ...
+      },
+      // highlight-end
+    },
+  },
+}
+```
+
+다음 옵션을 사용할 수 있습니다:
+
+| Path                     | Description                                                                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `beforeDocumentControls` | Save / Publish 버튼 앞에 사용자 정의 구성 요소를 주입합니다. [자세한 내용](#beforedocumentcontrols).                         |
+| `editMenuItems`          | 문서 컨트롤 바에 있는 3점 메뉴 드롭다운 내에 사용자 정의 구성 요소를 주입합니다. [자세한 내용](#editmenuitems). |
+| `SaveButton`             | 현재 문서를 저장하는 버튼입니다. [자세한 내용](#savebutton).                                                       |
+| `SaveDraftButton`        | 현재 문서를 초안으로 저장하는 버튼입니다. [자세한 내용](#savedraftbutton).                                       |
+| `PublishButton`          | 현재 문서를 게시하는 버튼입니다. [자세한 내용](#publishbutton).                                                |
+| `PreviewButton`          | 현재 문서를 미리 보는 버튼입니다. [자세한 내용](#previewbutton).                                                 |
+| `Description`            | Global의 설명입니다. [자세한 내용](#description).                                                                   |
+
+### SaveButton
+
+`SaveButton` 속성을 사용하면 Edit View에서 사용자 정의 Save Button을 렌더링할 수 있습니다.
+
+`SaveButton` 구성 요소를 추가하려면 [Collection Config](../configuration/collections)에서 `components.edit.SaveButton` 속성을 사용하거나 [Global Config](../configuration/globals)에서 `components.elements.SaveButton`을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  // ...
+  admin: {
+    components: {
+      edit: {
+        // highlight-start
+        SaveButton: '/path/to/MySaveButton',
+        // highlight-end
+      },
+    },
+  },
+}
+```다음은 사용자 정의 `SaveButton` 구성 요소의 예입니다:
+
+#### Server Component
+
+```tsx
+import React from 'react'
+import { SaveButton } from '@payloadcms/ui'
+import type { SaveButtonServerProps } from 'payload'
+
+export function MySaveButton(props: SaveButtonServerProps) {
+  return <SaveButton label="Save" />
+}
+```
+
+#### Client Component
+
+```tsx
+'use client'
+import React from 'react'
+import { SaveButton } from '@payloadcms/ui'
+import type { SaveButtonClientProps } from 'payload'
+
+export function MySaveButton(props: SaveButtonClientProps) {
+  return <SaveButton label="Save" />
+}
+```
+
+### beforeDocumentControls
+
+`beforeDocumentControls` 속성을 사용하면 기본 문서 작업 버튼(Save, Publish 또는 Preview 등) 바로 앞에 사용자 정의 구성 요소를 렌더링할 수 있습니다. 이는 내장 컨트롤 앞에 사용자 정의 버튼, 상태 표시기 또는 기타 UI 요소를 주입하는 데 유용합니다.
+
+`beforeDocumentControls` 구성 요소를 추가하려면 [Collection Config](../configuration/collections)에서 `components.edit.beforeDocumentControls` 속성을 사용하거나 [Global Config](../configuration/globals)에서 `components.elements.beforeDocumentControls`를 사용하세요:
+
+#### Collections
+
+```
+export const MyCollection: CollectionConfig = {
+  admin: {
+    components: {
+      edit: {
+        // highlight-start
+        beforeDocumentControls: ['/path/to/CustomComponent'],
+        // highlight-end
+      },
+    },
+  },
+}
+```#### Globals
+
+```
+export const MyGlobal: GlobalConfig = {
+  admin: {
+    components: {
+      elements: {
+        // highlight-start
+        beforeDocumentControls: ['/path/to/CustomComponent'],
+        // highlight-end
+      },
+    },
+  },
+}
+```
+
+다음은 사용자 정의 `beforeDocumentControls` 구성 요소의 예입니다:
+
+#### Server Component
+
+```tsx
+import React from 'react'
+import type { BeforeDocumentControlsServerProps } from 'payload'
+
+export function MyCustomDocumentControlButton(
+  props: BeforeDocumentControlsServerProps,
+) {
+  return <div>This is a custom beforeDocumentControl button (Server)</div>
+}
+```
+
+#### Client Component
+
+```tsx
+'use client'
+import React from 'react'
+import type { BeforeDocumentControlsClientProps } from 'payload'
+
+export function MyCustomDocumentControlButton(
+  props: BeforeDocumentControlsClientProps,
+) {
+  return <div>This is a custom beforeDocumentControl button (Client)</div>
+}
+```### editMenuItems
+
+`editMenuItems` 속성을 사용하면 문서 컨트롤 바에 있는 3점 메뉴 드롭다운에 사용자 정의 구성 요소를 주입할 수 있습니다. 이 드롭다운에는 `Create New`, `Duplicate`, `Delete` 및 추가 기능이 활성화된 경우의 기타 옵션을 포함하는 기본 옵션이 포함되어 있습니다. 추가하는 모든 사용자 정의 구성 요소는 이러한 기본 항목 아래에 나타납니다.
+
+`editMenuItems`를 추가하려면 [Collection Config](../configuration/collections)에서 `components.edit.editMenuItems` 속성을 사용하세요:
+
+#### Config Example
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const Pages: CollectionConfig = {
+  slug: 'pages',
+  admin: {
+    components: {
+      edit: {
+        // highlight-start
+        editMenuItems: ['/path/to/CustomEditMenuItem'],
+        // highlight-end
+      },
+    },
+  },
+}
+```
+
+다음은 사용자 정의 `editMenuItems` 구성 요소의 예입니다:
+
+#### Server Component
+
+```tsx
+import React from 'react'
+import { PopupList } from '@payloadcms/ui'
+
+import type { EditMenuItemsServerProps } from 'payload'
+
+export const EditMenuItems = async (props: EditMenuItemsServerProps) => {
+  const href = `/custom-action?id=${props.id}`
+
+  return (
+    <PopupList.ButtonGroup>
+      <PopupList.Button href={href}>Custom Edit Menu Item</PopupList.Button>
+      <PopupList.Button href={href}>
+        Another Custom Edit Menu Item - add as many as you need!
+      </PopupList.Button>
+    </PopupList.ButtonGroup>
+  )
+}
+```#### Client Component
+
+```tsx
+'use client'
+
+import React from 'react'
+import { PopupList } from '@payloadcms/ui'
+
+import type { EditViewMenuItemClientProps } from 'payload'
+
+export const EditMenuItems = (props: EditViewMenuItemClientProps) => {
+  const handleClick = () => {
+    console.log('Custom button clicked!')
+  }
+
+  return (
+    <PopupList.ButtonGroup>
+      <PopupList.Button onClick={handleClick}>
+        Custom Edit Menu Item
+      </PopupList.Button>
+      <PopupList.Button onClick={handleClick}>
+        Another Custom Edit Menu Item - add as many as you need!
+      </PopupList.Button>
+    </PopupList.ButtonGroup>
+  )
+}
+```
+
+<Banner type="info">
+  **스타일링:** 메뉴 항목이 기본 드롭다운 스타일과 자동으로 일치하도록 하려면
+  Payload의 내장 `PopupList.Button`을 사용하세요. 다른 모양을 원한다면
+  `PopupList.Button`에 자신만의 `className`을 전달하여 모양을 사용자 정의하거나,
+  표준 HTML `button` 요소 또는 디자인 선호도에 맞는 다른 구성 요소로 구축된
+  완전히 사용자 정의 버튼을 사용할 수 있습니다.
+</Banner>
+
+### SaveDraftButton
+
+`SaveDraftButton` 속성을 사용하면 Edit View에서 사용자 정의 Save Draft Button을 렌더링할 수 있습니다.
+
+`SaveDraftButton` 구성 요소를 추가하려면 [Collection Config](../configuration/collections)에서 `components.edit.SaveDraftButton` 속성을 사용하거나 [Global Config](../configuration/globals)에서 `components.elements.SaveDraftButton`을 사용하세요:```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  // ...
+  admin: {
+    components: {
+      edit: {
+        // highlight-start
+        SaveDraftButton: '/path/to/MySaveDraftButton',
+        // highlight-end
+      },
+    },
+  },
+}
+```
+
+다음은 사용자 정의 `SaveDraftButton` 구성 요소의 예입니다:
+
+#### Server Component
+
+```tsx
+import React from 'react'
+import { SaveDraftButton } from '@payloadcms/ui'
+import type { SaveDraftButtonServerProps } from 'payload'
+
+export function MySaveDraftButton(props: SaveDraftButtonServerProps) {
+  return <SaveDraftButton />
+}
+```
+
+#### Client Component
+
+```tsx
+'use client'
+import React from 'react'
+import { SaveDraftButton } from '@payloadcms/ui'
+import type { SaveDraftButtonClientProps } from 'payload'
+
+export function MySaveDraftButton(props: SaveDraftButtonClientProps) {
+  return <SaveDraftButton />
+}
+```### PublishButton
+
+`PublishButton` 속성을 사용하면 Edit View에서 사용자 정의 Publish Button을 렌더링할 수 있습니다.
+
+`PublishButton` 구성 요소를 추가하려면 [Collection Config](../configuration/collections)에서 `components.edit.PublishButton` 속성을 사용하거나 [Global Config](../configuration/globals)에서 `components.elements.PublishButton`을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  // ...
+  admin: {
+    components: {
+      edit: {
+        // highlight-start
+        PublishButton: '/path/to/MyPublishButton',
+        // highlight-end
+      },
+    },
+  },
+}
+```
+
+다음은 사용자 정의 `PublishButton` 구성 요소의 예입니다:
+
+#### Server Component
+
+```tsx
+import React from 'react'
+import { PublishButton } from '@payloadcms/ui'
+import type { PublishButtonClientProps } from 'payload'
+
+export function MyPublishButton(props: PublishButtonServerProps) {
+  return <PublishButton label="Publish" />
+}
+```
+
+#### Client Component
+
+```tsx
+'use client'
+import React from 'react'
+import { PublishButton } from '@payloadcms/ui'
+import type { PublishButtonClientProps } from 'payload'
+
+export function MyPublishButton(props: PublishButtonClientProps) {
+  return <PublishButton label="Publish" />
+}
+```### PreviewButton
+
+`PreviewButton` 속성을 사용하면 Edit View에서 사용자 정의 Preview Button을 렌더링할 수 있습니다.
+
+`PreviewButton` 구성 요소를 추가하려면 [Collection Config](../configuration/collections)에서 `components.edit.PreviewButton` 속성을 사용하거나 [Global Config](../configuration/globals)에서 `components.elements.PreviewButton`을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  // ...
+  admin: {
+    components: {
+      edit: {
+        // highlight-start
+        PreviewButton: '/path/to/MyPreviewButton',
+        // highlight-end
+      },
+    },
+  },
+}
+```
+
+다음은 사용자 정의 `PreviewButton` 구성 요소의 예입니다:
+
+#### Server Component
+
+```tsx
+import React from 'react'
+import { PreviewButton } from '@payloadcms/ui'
+import type { PreviewButtonServerProps } from 'payload'
+
+export function MyPreviewButton(props: PreviewButtonServerProps) {
+  return <PreviewButton />
+}
+```
+
+#### Client Component
+
+```tsx
+'use client'
+import React from 'react'
+import { PreviewButton } from '@payloadcms/ui'
+import type { PreviewButtonClientProps } from 'payload'
+
+export function MyPreviewButton(props: PreviewButtonClientProps) {
+  return <PreviewButton />
+}
+```### Description
+
+`Description` 속성을 사용하면 Edit View에서 Collection 또는 Global의 사용자 정의 설명을 렌더링할 수 있습니다.
+
+`Description` 구성 요소를 추가하려면 [Collection Config](../configuration/collections)에서 `components.edit.Description` 속성을 사용하거나 [Global Config](../configuration/globals)에서 `components.elements.Description`을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  // ...
+  admin: {
+    components: {
+      // highlight-start
+      Description: '/path/to/MyDescriptionComponent',
+      // highlight-end
+    },
+  },
+}
+```
+
+<Banner type="warning">
+  **참고:** `Description` 구성 요소는 Edit View와 [List View](./list-view) 간에 공유됩니다.
+</Banner>
+
+다음은 사용자 정의 `Description` 구성 요소의 예입니다:
+
+#### Server Component
+
+```tsx
+import React from 'react'
+import type { ViewDescriptionServerProps } from 'payload'
+
+export function MyDescriptionComponent(props: ViewDescriptionServerProps) {
+  return <div>This is a custom description component (Server)</div>
+}
+```
+
+#### Client Component
+
+```tsx
+'use client'
+import React from 'react'
+import type { ViewDescriptionClientProps } from 'payload'
+
+export function MyDescriptionComponent(props: ViewDescriptionClientProps) {
+  return <div>This is a custom description component (Client)</div>
+}
+```### Upload
+
+`Upload` 속성을 사용하면 Edit View에서 사용자 정의 파일 업로드 구성 요소를 렌더링할 수 있습니다.
+
+`Upload` 구성 요소를 추가하려면 [Collection Config](../configuration/collections)에서 `components.edit.Upload` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  // ...
+  admin: {
+    components: {
+      edit: {
+        // highlight-start
+        Upload: '/path/to/MyUploadComponent',
+        // highlight-end
+      },
+    },
+  },
+}
+```
+
+<Banner type="warning">
+  **참고:** Upload 구성 요소는 Collections에서만 사용할 수 있습니다.
+</Banner>
+
+다음은 사용자 정의 `Upload` 구성 요소의 예입니다:
+
+```tsx
+import React from 'react'
+
+export function MyUploadComponent() {
+  return <input type="file" />
+}
+```

@@ -1,0 +1,241 @@
+---
+title: 페이지 메타데이터
+label: 메타데이터
+order: 70
+desc: 관리자 패널 내 페이지의 메타데이터를 커스터마이징하세요
+keywords: 관리자, 컴포넌트, 커스텀, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+관리자 패널 내의 모든 페이지는 실시간 문서 데이터, 사용자의 현재 로케일 등에서 파생된 동적이고 자동 생성된 메타데이터를 자동으로 받습니다. 여기에는 페이지 제목, 설명, og:image 등이 포함되며 추가 구성이 필요하지 않습니다.
+
+메타데이터는 루트 수준에서 완전히 구성 가능하며 개별 컬렉션, 문서 및 커스텀 뷰로 계단식으로 전달됩니다. 이를 통해 합리적인 기본값을 제공하면서도 모든 페이지의 메타데이터를 높은 정밀도로 제어할 수 있습니다.
+
+모든 메타데이터는 Next.js의 [`generateMetadata`](https://nextjs.org/docs/app/api-reference/functions/generate-metadata) 함수에 주입됩니다. 이는 관리자 패널 내 페이지의 `<head>`를 생성하는 데 사용됩니다. Next.js에서 사용할 수 있는 모든 메타데이터 옵션이 Payload에 의해 노출됩니다.
+
+관리자 패널 내에서 메타데이터는 다음 수준에서 커스터마이징할 수 있습니다:
+
+- [루트 메타데이터](#root-metadata)
+- [컬렉션 메타데이터](#collection-metadata)
+- [글로벌 메타데이터](#global-metadata)
+- [뷰 메타데이터](#view-metadata)
+
+이 모든 유형의 메타데이터는 루트 수준에서 몇 가지 주요 차이점을 가지고 유사한 구조를 공유합니다. 메타데이터를 커스터마이징하려면 사용 가능한 범위 목록을 참조하세요. 달성하려는 목적에 해당하는 범위를 결정한 다음 Payload Config 내에서 메타데이터를 작성하세요.
+
+## 루트 메타데이터
+
+루트 메타데이터는 관리자 패널 내의 모든 페이지에 적용되는 메타데이터입니다. 여기서 각 페이지 제목에 추가되는 접미사, 브라우저 탭에 표시되는 파비콘, 소셜 미디어에서 관리자 패널을 공유할 때 사용되는 Open Graph 데이터와 같은 것들을 제어할 수 있습니다.
+
+루트 메타데이터를 커스터마이징하려면 Payload Config에서 `admin.meta` 키를 사용하세요:
+
+```ts
+{
+  // ...
+  admin: {
+    // highlight-start
+    meta: {
+    // highlight-end
+      title: 'My Admin Panel',
+      description: 'The best admin panel in the world',
+      icons: [
+        {
+          rel: 'icon',
+          type: 'image/png',
+          url: '/favicon.png',
+        },
+      ],
+    },
+  },
+}
+```
+
+루트 메타데이터에는 다음 옵션들을 사용할 수 있습니다:
+
+| 키                   | 타입                                    | 설명                                                                                                                                                                                                                                 |
+| -------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `defaultOGImageType` | `dynamic` (기본값), `static`, 또는 `off` | 사용할 기본 OG 이미지의 타입. `dynamic`으로 설정하면 Payload는 Next.js 이미지 생성을 사용하여 페이지 제목으로 이미지를 생성합니다. `static`으로 설정하면 Payload는 `defaultOGImage` URL을 사용합니다. `off`로 설정하면 Payload는 OG 이미지를 생성하지 않습니다. |
+| `titleSuffix`        | `string`                                | 모든 페이지 제목의 끝에 추가할 접미사. 기본값은 "- Payload"입니다.                                                                                                                                                                     |
+| `[keyof Metadata]`   | `unknown`                               | Next.js가 `generateMetadata` 함수 내에서 지원하는 기타 속성들. [자세한 내용](https://nextjs.org/docs/app/api-reference/functions/generate-metadata).                                                                                   |
+
+<Banner type="success">
+  **참고:** 이것들은 관리자 패널의 _루트 수준_ 옵션입니다. 각각의 설정을 통해
+  [컬렉션](../configuration/collections),
+  [글로벌](../configuration/globals), 문서 수준에서도 메타데이터를
+  커스터마이징할 수 있습니다.
+</Banner>
+
+### 아이콘
+
+아이콘 Config는 관리자 패널의 아이콘을 지정하는 데 사용되는 `<link>` 태그에 해당합니다. `icons` 키는 객체의 배열이며, 각각은 개별 아이콘을 나타냅니다. 아이콘은 문서와 아이콘 사이의 관계를 지정하는 `rel` 속성에 의해 서로 구별됩니다.
+
+가장 일반적인 아이콘 타입은 브라우저 탭에 표시되는 파비콘입니다. 이는 `rel` 속성 `icon`으로 지정됩니다. 다른 일반적인 아이콘 타입에는 관리자 패널이 홈 화면에 저장될 때 Apple 기기에서 사용하는 `apple-touch-icon`과 Safari가 관리자 패널 아이콘을 마스킹하는 데 사용하는 `mask-icon`이 있습니다.
+
+아이콘을 커스터마이징하려면 Payload Config에서 `admin.meta.icons` 속성을 사용하세요:
+
+```ts
+{
+  // ...
+  admin: {
+    meta: {
+      // highlight-start
+      icons: [
+      // highlight-end
+        {
+          rel: 'icon',
+          type: 'image/png',
+          url: '/favicon.png',
+        },
+        {
+          rel: 'apple-touch-icon',
+          type: 'image/png',
+          url: '/apple-touch-icon.png',
+        },
+      ],
+    },
+  },
+}
+```
+
+사용 가능한 모든 아이콘 옵션의 전체 목록은 [Next.js 문서](https://nextjs.org/docs/app/api-reference/functions/generate-metadata#icons)를 참조하세요.
+
+### Open Graph
+
+Open Graph 메타데이터는 소셜 미디어 플랫폼에서 공유할 때 URL이 어떻게 표시되는지 제어하는 데 사용되는 태그 세트입니다. Open Graph 메타데이터는 Payload에 의해 자동으로 생성되지만 루트 수준에서 커스터마이징할 수 있습니다.
+
+Open Graph 메타데이터를 커스터마이징하려면 Payload Config에서 `admin.meta.openGraph` 속성을 사용하세요:
+
+```ts
+{
+  // ...
+  admin: {
+    meta: {
+      // highlight-start
+      openGraph: {
+      // highlight-end
+        description: 'The best admin panel in the world',
+        images: [
+          {
+            url: 'https://example.com/image.jpg',
+            width: 800,
+            height: 600,
+          },
+        ],
+        siteName: 'Payload',
+        title: 'My Admin Panel',
+      },
+    },
+  },
+}
+```
+
+사용 가능한 모든 Open Graph 옵션의 전체 목록은 [Next.js 문서](https://nextjs.org/docs/app/api-reference/functions/generate-metadata#opengraph)를 참조하세요.
+
+### 로봇
+
+`robots` 속성을 설정하면 관리자 패널의 `<head>` 내에서 렌더링되는 `robots` 메타 태그를 제어할 수 있습니다. 이는 검색 엔진이 페이지를 색인화하는 방법과 검색 결과에 표시하는 방법을 제어하는 데 사용할 수 있습니다.
+
+기본적으로 관리자 패널은 검색 엔진이 관리자 패널 내의 페이지를 색인화하는 것을 방지하도록 설정되어 있습니다.
+
+로봇 Config를 커스터마이징하려면 Payload Config에서 `admin.meta.robots` 속성을 사용하세요:
+
+```ts
+{
+  // ...
+  admin: {
+    meta: {
+      // highlight-start
+      robots: 'noindex, nofollow',
+      // highlight-end
+    },
+  },
+}
+```
+
+사용 가능한 모든 로봇 옵션의 전체 목록은 [Next.js 문서](https://nextjs.org/docs/app/api-reference/functions/generate-metadata#robots)를 참조하세요.
+
+##### 크롤링 방지
+
+`admin.meta.robots`를 통해 메타 태그를 설정하는 것은 검색 엔진이 웹 페이지를 _색인화_하는 것을 방지할 수 있지만 _크롤링_되는 것을 방지하지는 못합니다.
+
+페이지가 완전히 크롤링되는 것을 방지하려면 루트 디렉토리에 `robots.txt` 파일을 추가하세요.
+
+```text
+User-agent: *
+Disallow: /admin/
+```
+
+<Banner type="info">
+  **참고:** `config.routes`를 통해 관리자 패널의 경로를 커스터마이징한 경우
+  `Disallow` 지시문을 커스텀 경로와 일치하도록 업데이트해야 합니다.
+</Banner>
+
+## 컬렉션 메타데이터
+
+컬렉션 메타데이터는 관리자 패널 내 주어진 컬렉션의 모든 페이지에 적용되는 메타데이터입니다. 이 메타데이터는 뷰 자체에서 재정의되지 않는 한 주어진 컬렉션 내의 모든 뷰의 제목과 설명을 커스터마이징하는 데 사용됩니다.
+
+컬렉션 메타데이터를 커스터마이징하려면 컬렉션 Config에서 `admin.meta` 키를 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  // ...
+  admin: {
+    // highlight-start
+    meta: {
+      // highlight-end
+      title: 'My Collection',
+      description: 'The best collection in the world',
+    },
+  },
+}
+```
+
+컬렉션 메타 설정은 [루트 메타데이터](#root-metadata) 설정과 동일한 옵션을 가집니다.
+
+## 글로벌 메타데이터
+
+글로벌 메타데이터는 관리자 패널 내 주어진 글로벌의 모든 페이지에 적용되는 메타데이터입니다. 이 메타데이터는 뷰 자체에서 재정의되지 않는 한 주어진 글로벌 내의 모든 뷰의 제목과 설명을 커스터마이징하는 데 사용됩니다.
+
+글로벌 메타데이터를 커스터마이징하려면 글로벌 Config에서 `admin.meta` 키를 사용하세요:
+
+```ts
+import { GlobalConfig } from 'payload'
+
+export const MyGlobal: GlobalConfig = {
+  // ...
+  admin: {
+    // highlight-start
+    meta: {
+      // highlight-end
+      title: 'My Global',
+      description: 'The best admin panel in the world',
+    },
+  },
+}
+```
+
+글로벌 메타 설정은 [루트 메타데이터](#root-metadata) 설정과 동일한 옵션을 가집니다.
+
+## 뷰 메타데이터
+
+뷰 메타데이터는 관리자 패널 내의 특정 [뷰](../custom-components/custom-views)에 적용되는 메타데이터입니다. 이 메타데이터는 [루트](#root-metadata), [컬렉션](#collection-metadata), 또는 [글로벌](#global-metadata) 수준에서 설정된 메타데이터를 재정의하여 특정 뷰의 제목과 설명을 커스터마이징하는 데 사용됩니다.
+
+뷰 메타데이터를 커스터마이징하려면 뷰 Config에서 `meta` 키를 사용하세요:
+
+```ts
+{
+  // ...
+  admin: {
+    views: {
+      dashboard: {
+        // highlight-start
+        meta: {
+        // highlight-end
+          title: 'My Dashboard',
+          description: 'The best dashboard in the world',
+        }
+      },
+    },
+  },
+}
+```

@@ -1,0 +1,55 @@
+---
+title: JWT 전략
+label: JWT 전략
+order: 40
+desc: JSON Web Token 기반 인증을 활성화하여 Payload와 인터페이스하세요.
+keywords: 인증, 구성, 설정, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+Payload는 JSON Web Token(JWT)을 통한 [인증](./overview) 기능을 제공합니다. 이는 `login`, `logout`, `refresh`, `me` 인증 작업의 응답에서 읽을 수 있습니다.
+
+<Banner type="success">
+  **팁:** [접근 제어](../access-control/overview)와 [훅](../hooks/overview) 내에서
+  `req.user` 인수를 통해 로그인한 사용자에 접근할 수 있습니다. [자세한
+  내용](./token-data).
+</Banner>
+
+### Authorization 헤더를 통한 사용자 식별
+
+HTTP 전용 쿠키를 통한 인증 외에도, HTTP 요청의 `Authorization` 헤더를 통해 사용자를 식별할 수 있습니다.
+
+예제:
+
+```ts
+const user = await fetch('http://localhost:3000/api/users/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    email: 'dev@payloadcms.com',
+    password: 'password',
+  }),
+}).then((req) => await req.json())
+
+const request = await fetch('http://localhost:3000', {
+  headers: {
+    Authorization: `JWT ${user.token}`,
+  },
+})
+```
+
+### 토큰 생략
+
+인증 작업에서 토큰이 반환되는 것을 방지하고 싶은 경우가 있습니다. 다음과 같이 `removeTokenFromResponses`를 `true`로 설정하여 이를 수행할 수 있습니다:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const UsersWithoutJWTs: CollectionConfig = {
+  slug: 'users-without-jwts',
+  auth: {
+    removeTokenFromResponses: true, // highlight-line
+  },
+}
+```

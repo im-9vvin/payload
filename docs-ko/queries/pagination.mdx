@@ -1,0 +1,161 @@
+---
+title: Pagination
+label: Pagination
+order: 40
+desc: Payload 쿼리는 자동 페이지네이션을 제공하여 앱 내에서 문서의 페이지네이션된 목록을 생성할 수 있습니다.
+keywords: query, documents, pagination, documentation, Content Management System, cms, headless, javascript, node, react, nextjs
+---
+
+페이지네이션을 통해 페이지당 반환되는 문서 수를 제한하고 특정 결과 페이지를 가져올 수 있습니다. 이는 애플리케이션 내에서 문서의 페이지네이션된 목록을 생성하는 데 유용합니다.
+
+모든 페이지네이션된 응답은 `docs` 배열 내에 문서를 포함하고, `totalDocs`, `limit`, `totalPages`, `page` 등과 같은 페이지네이션과 관련된 최상위 메타데이터를 반환합니다.
+
+<Banner type="success">
+  **참고:** 컬렉션 `find` 쿼리는 자동으로 페이지네이션됩니다.
+</Banner>
+
+## 옵션
+
+모든 Payload API는 아래의 페이지네이션 제어를 지원합니다. 이를 통해 애플리케이션 내에서 문서의 페이지네이션된 목록을 생성할 수 있습니다:
+
+| 제어          | 기본값   | 설명                                                               |
+| ------------ | ------- | ----------------------------------------------------------------- |
+| `limit`      | `10`    | 페이지당 반환되는 문서 수를 제한합니다. [자세한 내용](#limit).          |
+| `pagination` | `true`  | 페이지네이션을 비활성화하고 모든 문서를 반환하려면 `false`로 설정합니다. |
+| `page`       | `1`     | 특정 페이지 번호를 가져옵니다.                                        |
+
+## Local API
+
+[Local API](../local-api/overview)에서 페이지네이션 제어를 지정하려면, 쿼리에서 `limit`, `page`, `pagination` 옵션을 사용할 수 있습니다:
+
+```ts
+import type { Payload } from 'payload'
+
+const getPosts = async (payload: Payload) => {
+  const posts = await payload.find({
+    collection: 'posts',
+    // highlight-start
+    limit: 10,
+    page: 2,
+    // highlight-end
+  })
+
+  return posts
+}
+```
+
+## REST API
+
+[REST API](../rest-api/overview)에서는 아래의 페이지네이션 제어를 쿼리 문자열로 사용할 수 있습니다:
+
+```ts
+// highlight-start
+fetch('https://localhost:3000/api/posts?limit=10&page=2')
+  // highlight-end
+  .then((res) => res.json())
+  .then((data) => console.log(data))
+```
+
+## 응답
+
+모든 페이지네이션된 응답은 `docs` 배열 내에 문서를 포함하고, 페이지네이션과 관련된 최상위 메타데이터를 반환합니다.
+
+`find` 작업은 응답에 다음 속성을 포함합니다:
+
+| 속성            | 설명                                                    |
+| --------------- | ------------------------------------------------------ |
+| `docs`          | 컬렉션의 문서 배열                                        |
+| `totalDocs`     | 컬렉션 내에서 사용 가능한 총 문서 수                        |
+| `limit`         | limit 쿼리 매개변수 - 기본값 `10`                         |
+| `totalPages`    | 쿼리된 `limit`를 기반으로 한 총 사용 가능한 페이지 수          |
+| `page`          | 현재 페이지 번호                                         |
+| `pagingCounter` | 현재 페이지의 첫 번째 문서의 `번호`                         |
+| `hasPrevPage`   | 이전 페이지가 존재하는지 `true/false`                      |
+| `hasNextPage`   | 다음 페이지가 존재하는지 `true/false`                      |
+| `prevPage`      | 이전 페이지의 `번호`, 존재하지 않으면 `null`                |
+| `nextPage`      | 다음 페이지의 `번호`, 존재하지 않으면 `null`                |
+
+**응답 예시:**
+
+```json
+{
+  // 문서 배열 // highlight-line
+  "docs": [
+    {
+      "title": "Page Title",
+      "description": "Some description text",
+      "priority": 1,
+      "createdAt": "2020-10-17T01:19:29.858Z",
+      "updatedAt": "2020-10-17T01:19:29.858Z",
+      "id": "5f8a46a1dd05db75c3c64760"
+    }
+  ],
+  // 메타데이터 // highlight-line
+  "totalDocs": 6,
+  "limit": 1,
+  "totalPages": 6,
+  "page": 1,
+  "pagingCounter": 1,
+  "hasPrevPage": false,
+  "hasNextPage": true,
+  "prevPage": null,
+  "nextPage": 2
+}
+```
+
+## Limit
+
+페이지당 반환되는 문서 수를 제한하기 위해 `limit`를 지정할 수 있습니다.
+
+<Banner type="warning">
+  **알림:** 기본적으로 `limit: 0`인 모든 쿼리는 자동으로
+  [페이지네이션을 비활성화](#disabling-pagination)합니다.
+</Banner>
+
+#### 성능상의 이점
+
+특정 문서를 쿼리하고 하나의 문서만 일치할 것으로 신뢰할 수 있게 예상할 수 있다면, 데이터베이스 조회 수를 줄이고 성능을 향상시키기 위해 limit을 `1`(또는 다른 낮은 숫자)로 설정할 수 있습니다.
+
+예를 들어, `slug`와 같은 고유 필드로 문서를 쿼리할 때, 해당 slug를 가진 문서가 하나만 있다는 것을 알고 있으므로 limit을 `1`로 설정할 수 있습니다.
+
+이를 위해서는 쿼리에서 `limit` 옵션을 설정합니다:
+
+```ts
+await payload.find({
+  collection: 'posts',
+  where: {
+    slug: {
+      equals: 'post-1',
+    },
+  },
+  // highlight-start
+  limit: 1,
+  // highlight-end
+})
+```
+
+## 페이지네이션 비활성화
+
+페이지네이션을 비활성화하면 페이지네이션 계산의 오버헤드를 줄이고 쿼리 속도를 향상시켜 성능을 개선할 수 있습니다.
+
+Local API 내에서 `find` 작업의 경우, `find` 로컬 작업에 `pagination: false`를 전달하여 페이지네이션을 비활성화하고 컬렉션에서 모든 문서를 검색할 수 있습니다.
+
+이를 위해서는 쿼리에서 `pagination: false`를 설정합니다:
+
+```ts
+import type { Payload } from 'payload'
+
+const getPost = async (payload: Payload) => {
+  const posts = await payload.find({
+    collection: 'posts',
+    where: {
+      title: { equals: 'My Post' },
+    },
+    // highlight-start
+    pagination: false,
+    // highlight-end
+  })
+
+  return posts
+}
+```

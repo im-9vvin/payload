@@ -1,0 +1,418 @@
+---
+title: Root Components
+label: Root Components
+order: 20
+desc:
+keywords: admin, components, custom, documentation, Content Management System, cms, headless, javascript, node, react, nextjs
+---
+
+Root Components는 로고나 메인 네비게이션과 같이 [Admin Panel](../admin/overview)에 높은 수준에서 영향을 미치는 구성 요소들입니다. 이러한 구성 요소를 자신만의 [Custom Components](./overview)로 교체하여 완전히 사용자 정의된 모양과 느낌을 만들 수 있습니다.
+
+[Custom CSS](../admin/customizing-css)와 결합하면 Admin Panel을 브랜드와 일치하도록 화이트 라벨링하는 것과 같이 사용자에게 진정으로 고유한 경험을 만들 수 있습니다.
+
+Root Components를 재정의하려면 [Payload Config](../configuration/overview)의 루트에서 `admin.components` 속성을 사용하세요:```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  admin: {
+    // highlight-start
+    components: {
+      // ...
+    },
+    // highlight-end
+  },
+})
+```
+
+## Config Options
+
+다음 옵션을 사용할 수 있습니다:
+
+| Path              | Description                                                                                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `actions`         | Admin Panel의 헤더 _내에_ 렌더링되는 Custom Components 배열로, 추가 상호 작용성과 기능을 제공합니다. [자세한 내용](#actions).     |
+| `afterDashboard`  | 내장 Dashboard에 주입할 Custom Components 배열로, 기본 대시보드 내용 _이후에_ 렌더링됩니다. [자세한 내용](#afterdashboard).                            |
+| `afterLogin`      | 내장 Login에 주입할 Custom Components 배열로, 기본 로그인 양식 _이후에_ 렌더링됩니다. [자세한 내용](#afterlogin).                                            |
+| `afterNavLinks`   | 내장 Nav에 주입할 Custom Components 배열로, 링크 _이후에_ 렌더링됩니다. [자세한 내용](#afternavlinks).                                                        |
+| `beforeDashboard` | 내장 Dashboard에 주입할 Custom Components 배열로, 기본 대시보드 내용 _이전에_ 렌더링됩니다. [자세한 내용](#beforedashboard).                          |
+| `beforeLogin`     | 내장 Login에 주입할 Custom Components 배열로, 기본 로그인 양식 _이전에_ 렌더링됩니다. [자세한 내용](#beforelogin).                                          |
+| `beforeNavLinks`  | 내장 Nav에 주입할 Custom Components 배열로, 링크 자체 _이전에_ 렌더링됩니다. [자세한 내용](#beforenavlinks).                                           |
+| `graphics.Icon`   | `Nav` 구성 요소와 같은 컨텍스트에서 사용되는 간단한 로고입니다. [자세한 내용](#graphicsicon).                                                                            |
+| `graphics.Logo`   | `Login` 뷰와 같은 컨텍스트에서 사용되는 전체 로고입니다. [자세한 내용](#graphicslogo).                                                                                     |
+| `header`          | Payload 헤더 위에 주입될 Custom Components 배열입니다. [자세한 내용](#header).                                                                          |
+| `logout.Button`   | 사용자를 로그아웃시키는 사이드바에 표시되는 버튼입니다. [자세한 내용](#logoutbutton).                                                                               |
+| `Nav`             | 사이드바/모바일 메뉴 전체를 포함합니다. [자세한 내용](#nav).                                                                                                |
+| `providers`       | 전체 Admin Panel을 감쌀 사용자 정의 [React Context](https://react.dev/learn/scaling-up-with-reducer-and-context) providers입니다. [자세한 내용](./custom-providers). |
+| `views`           | Admin Panel 내에서 뷰를 재정의하거나 새로 만듭니다. [자세한 내용](./custom-views).                                                                                     |_Custom Components 구축에 대한 자세한 내용은 [Building Custom Components](./overview#building-custom-components)를 참조하세요._
+
+<Banner type="success">
+  **참고:** 각각의 구성에서 [Collection
+  Components](../configuration/collections#custom-components) 및 [Global
+  Components](../configuration/globals#custom-components)를 설정할 수도 있습니다.
+</Banner>
+
+## Components
+
+### actions
+
+Actions는 Admin Panel의 헤더 내에서 렌더링됩니다. Actions는 일반적으로 추가 상호 작용성과 기능을 추가하는 버튼을 표시하는 데 사용되지만, 원하는 무엇이든 될 수 있습니다.
+
+action을 추가하려면 `admin.components` 구성에서 `actions` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  admin: {
+    // highlight-start
+    components: {
+      actions: ['/path/to/your/component'],
+    },
+    // highlight-end
+  },
+})
+```
+
+다음은 간단한 Action 구성 요소의 예입니다:
+
+```tsx
+export default function MyCustomAction() {
+  return (
+    <button onClick={() => alert('Hello, world!')}>
+      This is a custom action component
+    </button>
+  )
+}
+```
+
+<Banner type="success">
+  **참고:** 각각의 구성에서 [Edit View](./edit-view) 및 [List View](./list-view)에
+  Actions를 추가할 수도 있습니다.
+</Banner>### beforeDashboard
+
+`beforeDashboard` 속성을 사용하면 기본 대시보드 내용 이전에 내장 Dashboard에 Custom Components를 주입할 수 있습니다.
+
+`beforeDashboard` 구성 요소를 추가하려면 Payload Config에서 `admin.components.beforeDashboard` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  admin: {
+    // highlight-start
+    components: {
+      beforeDashboard: ['/path/to/your/component'],
+    },
+    // highlight-end
+  },
+})
+```
+
+다음은 간단한 `beforeDashboard` 구성 요소의 예입니다:
+
+```tsx
+export default function MyBeforeDashboardComponent() {
+  return <div>This is a custom component injected before the Dashboard.</div>
+}
+```
+
+### afterDashboard
+
+`beforeDashboard`와 마찬가지로 `afterDashboard` 속성을 사용하면 기본 대시보드 내용 _이후에_ 내장 Dashboard에 Custom Components를 주입할 수 있습니다.
+
+`afterDashboard` 구성 요소를 추가하려면 Payload Config에서 `admin.components.afterDashboard` 속성을 사용하세요:```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  admin: {
+    // highlight-start
+    components: {
+      afterDashboard: ['/path/to/your/component'],
+    },
+    // highlight-end
+  },
+})
+```
+
+다음은 간단한 `afterDashboard` 구성 요소의 예입니다:
+
+```tsx
+export default function MyAfterDashboardComponent() {
+  return <div>This is a custom component injected after the Dashboard.</div>
+}
+```
+
+### beforeLogin
+
+`beforeLogin` 속성을 사용하면 기본 로그인 양식 _이전에_ 내장 Login 뷰에 Custom Components를 주입할 수 있습니다.
+
+`beforeLogin` 구성 요소를 추가하려면 Payload Config에서 `admin.components.beforeLogin` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  admin: {
+    // highlight-start
+    components: {
+      beforeLogin: ['/path/to/your/component'],
+    },
+    // highlight-end
+  },
+})
+```다음은 간단한 `beforeLogin` 구성 요소의 예입니다:
+
+```tsx
+export default function MyBeforeLoginComponent() {
+  return <div>This is a custom component injected before the Login form.</div>
+}
+```
+
+### afterLogin
+
+`beforeLogin`과 마찬가지로 `afterLogin` 속성을 사용하면 기본 로그인 양식 _이후에_ 내장 Login 뷰에 Custom Components를 주입할 수 있습니다.
+
+`afterLogin` 구성 요소를 추가하려면 Payload Config에서 `admin.components.afterLogin` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  admin: {
+    // highlight-start
+    components: {
+      afterLogin: ['/path/to/your/component'],
+    },
+    // highlight-end
+  },
+})
+```
+
+다음은 간단한 `afterLogin` 구성 요소의 예입니다:
+
+```tsx
+export default function MyAfterLoginComponent() {
+  return <div>This is a custom component injected after the Login form.</div>
+}
+```### beforeNavLinks
+
+`beforeNavLinks` 속성을 사용하면 내장 [Nav Component](#nav)에서 네비게이션 링크 자체 _이전에_ Custom Components를 주입할 수 있습니다.
+
+`beforeNavLinks` 구성 요소를 추가하려면 Payload Config에서 `admin.components.beforeNavLinks` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  admin: {
+    // highlight-start
+    components: {
+      beforeNavLinks: ['/path/to/your/component'],
+    },
+    // highlight-end
+  },
+})
+```
+
+다음은 간단한 `beforeNavLinks` 구성 요소의 예입니다:
+
+```tsx
+export default function MyBeforeNavLinksComponent() {
+  return <div>This is a custom component injected before the Nav links.</div>
+}
+```
+
+### afterNavLinks
+
+`beforeNavLinks`와 마찬가지로 `afterNavLinks` 속성을 사용하면 내장 Nav에서 네비게이션 링크 _이후에_ Custom Components를 주입할 수 있습니다.`afterNavLinks` 구성 요소를 추가하려면 Payload Config에서 `admin.components.afterNavLinks` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  admin: {
+    // highlight-start
+    components: {
+      afterNavLinks: ['/path/to/your/component'],
+    },
+    // highlight-end
+  },
+})
+```
+
+다음은 간단한 `afterNavLinks` 구성 요소의 예입니다:
+
+```tsx
+export default function MyAfterNavLinksComponent() {
+  return <p>This is a custom component injected after the Nav links.</p>
+}
+```
+
+### Nav
+
+`Nav` 속성은 사이드바/모바일 메뉴 전체를 포함합니다. 이 속성을 사용하여 내장 Nav를 자신만의 사용자 정의 네비게이션으로 완전히 교체하세요.
+
+사용자 정의 네비게이션을 추가하려면 Payload Config에서 `admin.components.Nav` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  admin: {
+    // highlight-start
+    components: {
+      Nav: '/path/to/your/component',
+    },
+    // highlight-end
+  },
+})
+```다음은 간단한 `Nav` 구성 요소의 예입니다:
+
+```tsx
+import { Link } from '@payloadcms/ui'
+
+export default function MyCustomNav() {
+  return (
+    <nav>
+      <ul>
+        <li>
+          <Link href="/dashboard">Dashboard</Link>
+        </li>
+      </ul>
+    </nav>
+  )
+}
+```
+
+### graphics.Icon
+
+`Icon` 속성은 `Nav` 구성 요소와 같은 컨텍스트에서 사용되는 간단한 로고입니다. 이는 일반적으로 브랜드를 나타내는 작은 정사각형 아이콘입니다.
+
+사용자 정의 아이콘을 추가하려면 Payload Config에서 `admin.components.graphics.Icon` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  admin: {
+    // highlight-start
+    components: {
+      graphics: {
+        Icon: '/path/to/your/component',
+      },
+    },
+    // highlight-end
+  },
+})
+```
+
+다음은 간단한 `Icon` 구성 요소의 예입니다:
+
+```tsx
+export default function MyCustomIcon() {
+  return <img src="/path/to/your/icon.png" alt="My Custom Icon" />
+}
+```### graphics.Logo
+
+`Logo` 속성은 `Login` 뷰와 같은 컨텍스트에서 사용되는 전체 로고입니다. 이는 일반적으로 브랜드의 더 크고 자세한 표현입니다.
+
+사용자 정의 로고를 추가하려면 Payload Config에서 `admin.components.graphics.Logo` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  admin: {
+    // highlight-start
+    components: {
+      graphics: {
+        Logo: '/path/to/your/component',
+      },
+    },
+    // highlight-end
+  },
+})
+```
+
+다음은 간단한 `Logo` 구성 요소의 예입니다:
+
+```tsx
+export default function MyCustomLogo() {
+  return <img src="/path/to/your/logo.png" alt="My Custom Logo" />
+}
+```
+
+### header
+
+`header` 속성을 사용하면 Payload 헤더 위에 Custom Components를 주입할 수 있습니다.
+
+사용자 정의 헤더 구성 요소의 예로는 공지 배너, 알림 표시줄 또는 Admin Panel 상단의 눈에 띄는 위치에 표시하고 싶은 기타 모든 것이 있을 수 있습니다.`header` 구성 요소를 추가하려면 Payload Config에서 `admin.components.header` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  admin: {
+    // highlight-start
+    components: {
+      header: ['/path/to/your/component'],
+    },
+    // highlight-end
+  },
+})
+```
+
+다음은 간단한 `header` 구성 요소의 예입니다:
+
+```tsx
+export default function MyCustomHeader() {
+  return (
+    <header>
+      <h1>My Custom Header</h1>
+    </header>
+  )
+}
+```
+
+### logout.Button
+
+`logout.Button` 속성은 클릭할 때 사용자를 로그아웃시켜야 하는 사이드바에 표시되는 버튼입니다.
+
+사용자 정의 로그아웃 버튼을 추가하려면 Payload Config에서 `admin.components.logout.Button` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  // ...
+  admin: {
+    // highlight-start
+    components: {
+      logout: {
+        Button: '/path/to/your/component',
+      },
+    },
+    // highlight-end
+  },
+})
+```
+
+다음은 간단한 `logout.Button` 구성 요소의 예입니다:
+
+```tsx
+export default function MyCustomLogoutButton() {
+  return <button onClick={() => alert('Logging out!')}>Log Out</button>
+}
+```

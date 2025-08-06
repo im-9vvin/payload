@@ -1,0 +1,136 @@
+---
+title: 업로드 필드
+label: 업로드
+order: 210
+desc: 업로드 필드는 업로드를 지원하는 컬렉션에서만 파일을 업로드할 수 있게 해줍니다. 업로드 필드 사용법, 예제 및 옵션을 알아보세요.
+keywords: 업로드, 이미지 미디어, 필드, 구성, 설정, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, javascript, node, react, nextjs
+---
+
+업로드 필드는 [업로드](../upload/overview)를 지원하는 컬렉션에서 문서를 선택할 수 있게 해주며, 관리자 패널에서 선택을 썸네일로 형식화합니다.
+
+업로드 필드는 다양한 사용 사례에 유용합니다:
+
+- `페이지`에 특성 이미지 제공
+- `제품`이 PDF나 MP3 같은 다운로드 가능한 자산을 제공하도록 허용
+- 레이아웃 빌딩 블록에 배경 이미지를 특징짓는 능력 제공
+
+<LightDarkImage
+  srcLight="https://payloadcms.com/images/docs/fields/upload.png"
+  srcDark="https://payloadcms.com/images/docs/fields/upload-dark.png"
+  alt="Payload 관리자 패널의 업로드 필드를 보여줍니다"
+  caption="업로드 필드의 관리자 패널 스크린샷"
+/>
+
+업로드 필드를 생성하려면 [필드 Config](./overview)에서 `type`을 `upload`로 설정하세요:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyUploadField: Field = {
+  // ...
+  // highlight-start
+  type: 'upload',
+  relationTo: 'media',
+  // highlight-end
+}
+```
+
+<Banner type="warning">
+  **중요:** 업로드 필드를 사용하려면 [업로드](../upload/overview)를
+  허용하도록 구성된 [컬렉션](../configuration/collections)이 있어야 합니다.
+</Banner>
+
+## 구성 옵션
+
+| 옵션                   | 설명                                                                                                                                                                                                                                                                          |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`name`** \*          | 데이터베이스에서 저장되고 검색될 때 속성 이름으로 사용됩니다. [자세한 내용](/docs/fields/overview#field-names).                                                                                                                                                             |
+| **`relationTo`** \*    | 이 필드가 관계를 허용하도록 할 단일 컬렉션 `slug`를 제공합니다. **참고: 관련 컬렉션은 업로드를 지원하도록 구성되어야 합니다.**                                                                                                                                              |
+| **`filterOptions`**    | UI에 나타나는 옵션을 필터링하고 검증할 쿼리. [자세한 내용](#filtering-upload-options).                                                                                                                                                                                       |
+| **`hasMany`**          | true로 설정하면 이 필드가 하나만이 아닌 여러 관계를 가질 수 있게 하는 불린 값.                                                                                                                                                                                               |
+| **`minRows`**          | 값이 있을 때 검증 중 허용되는 최소 아이템 수. hasMany와 함께 사용됩니다.                                                                                                                                                                                                     |
+| **`maxRows`**          | 값이 있을 때 검증 중 허용되는 최대 아이템 수. hasMany와 함께 사용됩니다.                                                                                                                                                                                                     |
+| **`maxDepth`**         | 쿼리할 때 populate할 관련 문서의 반복 수에 대한 숫자 제한을 설정합니다. [Depth](../queries/depth)                                                                                                                                                                           |
+| **`label`**            | 관리자 패널에서 필드 레이블로 사용되는 텍스트 또는 각 언어에 대한 키가 있는 객체.                                                                                                                                                                                           |
+| **`unique`**           | 컬렉션의 각 항목이 이 필드에 대해 고유한 값을 가지도록 강제합니다.                                                                                                                                                                                                           |
+| **`validate`**         | 관리자 패널과 백엔드 모두에서 실행될 커스텀 검증 함수를 제공합니다. [자세한 내용](/docs/fields/overview#validation).                                                                                                                                                       |
+| **`index`**            | 더 빠른 쿼리를 생성하기 위해 이 필드에 대한 [인덱스](../database/indexes)를 구축합니다. 사용자가 이 필드의 데이터에 대해 쿼리를 자주 수행하는 경우 이 필드를 `true`로 설정하세요.                                                                                         |
+| **`saveToJWT`**        | 이 필드가 최상위 레벨이고 [인증](/docs/authentication/overview)을 지원하는 config에 중첩되어 있는 경우, 해당 데이터를 사용자 JWT에 포함합니다.                                                                                                                             |
+| **`hooks`**            | 이 필드에 대한 로직을 제어하기 위해 필드 훅을 제공합니다. [자세한 내용](../hooks/fields).                                                                                                                                                                                   |
+| **`access`**           | 사용자가 이 필드의 데이터로 무엇을 보고 할 수 있는지를 나타내는 필드 접근 제어를 제공합니다. [자세한 내용](../access-control/fields).                                                                                                                                     |
+| **`hidden`**           | 모든 API에서 이 필드의 가시성을 완전히 제한합니다. 데이터베이스에는 여전히 저장되지만 API나 관리자 패널에는 나타나지 않습니다.                                                                                                                                             |
+| **`defaultValue`**     | 이 필드의 기본값으로 사용될 데이터를 제공합니다. [자세한 내용](/docs/fields/overview#default-values).                                                                                                                                                                      |
+| **`displayPreview`**   | 업로드된 파일의 미리보기 표시를 활성화합니다. 관련 컬렉션의 `displayPreview` 옵션을 재정의합니다. [자세한 내용](/docs/upload/overview#collection-upload-options).                                                                                                         |
+| **`localized`**        | 이 필드에 대한 로컬라이제이션을 활성화합니다. 기본 config에서 [로컬라이제이션이 활성화](/docs/configuration/localization)되어야 합니다.                                                                                                                                    |
+| **`required`**         | 이 필드가 값을 가지도록 요구합니다.                                                                                                                                                                                                                                          |
+| **`admin`**            | 관리자 관련 구성. [관리자 옵션](./overview#admin-options).                                                                                                                                                                                                                   |
+| **`custom`**           | 커스텀 데이터 추가를 위한 확장 지점 (예: 플러그인용)                                                                                                                                                                                                                         |
+| **`typescriptSchema`** | JSON 스키마 제공으로 필드 타입 생성을 재정의합니다                                                                                                                                                                                                                           |
+| **`virtual`**          | 데이터베이스에서 필드를 비활성화하려면 `true`를 제공하거나, [필드를 관계와 연결](/docs/fields/relationship#linking-virtual-fields-with-relationships)하기 위해 문자열 경로를 제공합니다. [가상 필드](https://payloadcms.com/blog/learn-how-virtual-fields-can-help-solve-common-cms-challenges) 참조 |
+| **`graphQL`**          | 필드에 대한 커스텀 graphQL 구성. [자세한 내용](/docs/graphql/overview#field-complexity)                                                                                                                                                                                     |
+
+_\* 별표는 필수 속성을 나타냅니다._
+
+## 예제
+
+`collections/ExampleCollection.ts`
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const ExampleCollection: CollectionConfig = {
+  slug: 'example-collection',
+  fields: [
+    {
+      name: 'backgroundImage', // required
+      type: 'upload', // required
+      relationTo: 'media', // required
+      required: true,
+    },
+  ],
+}
+```
+
+## 업로드 옵션 필터링
+
+옵션은 [쿼리 제약](/docs/queries/overview)을 제공하여 동적으로 제한될 수 있으며, 이는 입력 검증과 UI에서 사용 가능한 업로드 필터링 모두에 사용됩니다.
+
+`filterOptions` 속성은 `Where` 쿼리이거나, 필터링하지 않으려면 `true`를, 모두 방지하려면 `false`를, 또는 `Where` 쿼리를 반환하는 함수일 수 있습니다. 함수를 사용할 때는 다음 속성을 가진 인수 객체와 함께 호출됩니다:
+
+| 속성          | 설명                                                                               |
+| ------------- | ---------------------------------------------------------------------------------- |
+| `relationTo`  | 필터링할 컬렉션 `slug`, 이 필드의 `relationTo` 속성으로 제한됨                     |
+| `data`        | 현재 편집 중인 전체 컬렉션 또는 글로벌 문서를 포함하는 객체                        |
+| `siblingData` | 이 필드와 같은 부모 내의 필드에만 범위가 지정된 문서 데이터를 포함하는 객체        |
+| `id`          | 현재 편집 중인 문서의 `id`. `create` 작업 중에는 `id`가 `undefined`입니다         |
+| `user`        | 현재 인증된 사용자를 포함하는 객체                                                 |
+| `req`         | `payload`, `user`, `locale` 등에 대한 참조를 포함하는 Payload 요청                |
+
+### 예제#filter-options-example
+
+```ts
+const uploadField = {
+  name: 'image',
+  type: 'upload',
+  relationTo: 'media',
+  filterOptions: {
+    mimeType: { contains: 'image' },
+  },
+}
+```
+
+쿼리 작성에 대한 자세한 내용은 [여기](/docs/queries/overview)에서 알아볼 수 있습니다.
+
+<Banner type="warning">
+  **참고:**
+
+업로드 필드에 **filterOptions**와 커스텀 **validate** 함수가
+모두 있는 경우, validate 함수에서 **payload/shared**에서 가져온
+기본 업로드 필드 검증 함수를 호출하지 않으면 api가 **filterOptions**를
+검증하지 않습니다.
+
+</Banner>
+
+## 양방향 관계
+
+`upload` 필드는 그 자체로 업로드 컬렉션의 문서를 참조하는 데 사용됩니다. 이는 "단방향" 관계로 간주될 수 있습니다. 편집자가 업로드 문서를 방문하여 어디서 사용되고 있는지 보도록 허용하려면, 업로드 활성화 컬렉션에서 `join` 필드를 사용할 수 있습니다. [Join 필드](./join)를 사용한 양방향 관계에 대해 자세히 알아보세요.

@@ -1,0 +1,319 @@
+---
+title: List View
+label: List View
+order: 70
+desc:
+keywords: admin, components, custom, documentation, Content Management System, cms, headless, javascript, node, react, nextjs
+---
+
+List View는 사용자가 [Admin Panel](../admin/overview) 내에서 [Collection](../configuration/collections) Documents 목록과 상호 작용하는 곳입니다. 여기서 그들이 찾는 것을 정확히 찾기 위해 문서를 보고, 정렬하고, 필터링하고, 페이지를 나눌 수 있습니다. 또한 사용자가 삭제, 편집 또는 게시와 같은 여러 문서에 대한 대량 작업을 한 번에 수행할 수 있는 곳이기도 합니다.
+
+List View는 전체를 Custom View로 교체하거나, 전체 뷰를 교체하지 않고 추가 기능이나 표현 요소를 추가하기 위해 여러 Custom Components를 주입할 수 있습니다.
+
+<Banner type="info">
+  **참고:** [Collections](../configuration/collections)만 List View를 가집니다.
+  [Globals](../configuration/globals)는 단일 문서이므로 List View를 가지지 않습니다.
+</Banner>
+
+## Custom List View
+
+전체 List View를 [Custom View](./custom-views)로 교체하려면 [Payload Config](../configuration/overview)에서 `admin.components.views.list` 속성을 사용하세요:
+
+```tsx
+import { buildConfig } from 'payload'
+
+const config = buildConfig({
+  // ...
+  admin: {
+    components: {
+      views: {
+        // highlight-start
+        list: '/path/to/MyCustomListView',
+        // highlight-end
+      },
+    },
+  },
+})
+```
+
+다음은 사용자 정의 List View의 예입니다:#### Server Component
+
+```tsx
+import React from 'react'
+import type { ListViewServerProps } from 'payload'
+import { DefaultListView } from '@payloadcms/ui'
+
+export function MyCustomServerListView(props: ListViewServerProps) {
+  return <div>This is a custom List View (Server)</div>
+}
+```
+
+#### Client Component
+
+```tsx
+'use client'
+import React from 'react'
+import type { ListViewClientProps } from 'payload'
+
+export function MyCustomClientListView(props: ListViewClientProps) {
+  return <div>This is a custom List View (Client)</div>
+}
+```
+
+_사용 가능한 모든 props를 포함한 Custom Views 구축에 대한 자세한 내용은 [Building Custom Views](./custom-views#building-custom-views)를 참조하세요._
+
+## Custom Components
+
+전체 List View를 [Custom View](./custom-views)로 교체하는 것 외에도 개별 구성 요소를 재정의할 수도 있습니다. 이를 통해 전체 뷰를 자신만의 것으로 교체하지 않고도 List View의 특정 부분을 사용자 정의할 수 있습니다.
+
+Collection의 List View 구성 요소를 재정의하려면 [Collection Config](../configuration/collections)에서 `admin.components` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  // ...
+  admin: {
+    // highlight-start
+    components: {
+      // ...
+    },
+    // highlight-end
+  },
+}
+```다음 옵션을 사용할 수 있습니다:
+
+| Path              | Description                                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `beforeList`      | List View에서 문서 목록 앞에 주입할 사용자 정의 구성 요소 배열입니다. [자세한 내용](#beforelist).       |
+| `beforeListTable` | List View에서 문서 테이블 앞에 주입할 사용자 정의 구성 요소 배열입니다. [자세한 내용](#beforelisttable). |
+| `afterList`       | List View에서 문서 목록 뒤에 주입할 사용자 정의 구성 요소 배열입니다. [자세한 내용](#afterlist).         |
+| `afterListTable`  | List View에서 문서 테이블 뒤에 주입할 사용자 정의 구성 요소 배열입니다. [자세한 내용](#afterlisttable).   |
+| `listMenuItems`   | List Controls 옆의 메뉴 내에 렌더링할 구성 요소 배열입니다 (Columns 및 Filters 옵션 뒤).          |
+| `Description`     | Collection의 설명을 렌더링하는 구성 요소입니다. [자세한 내용](#description).                                      |
+
+### beforeList
+
+`beforeList` 속성을 사용하면 List View에서 문서 목록 앞에 사용자 정의 구성 요소를 주입할 수 있습니다.
+
+`beforeList` 구성 요소를 추가하려면 [Collection Config](../configuration/collections)에서 `components.beforeList` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  // ...
+  admin: {
+    components: {
+      // highlight-start
+      beforeList: ['/path/to/MyBeforeListComponent'],
+      // highlight-end
+    },
+  },
+}
+```
+
+다음은 사용자 정의 `beforeList` 구성 요소의 예입니다:
+
+#### Server Component
+
+```tsx
+import React from 'react'
+import type { BeforeListServerProps } from 'payload'
+
+export function MyBeforeListComponent(props: BeforeListServerProps) {
+  return <div>This is a custom beforeList component (Server)</div>
+}
+```
+
+#### Client Component
+
+```tsx
+'use client'
+import React from 'react'
+import type { BeforeListClientProps } from 'payload'
+
+export function MyBeforeListComponent(props: BeforeListClientProps) {
+  return <div>This is a custom beforeList component (Client)</div>
+}
+```### beforeListTable
+
+`beforeListTable` 속성을 사용하면 List View에서 문서 테이블 앞에 사용자 정의 구성 요소를 주입할 수 있습니다.
+
+`beforeListTable` 구성 요소를 추가하려면 [Collection Config](../configuration/collections)에서 `components.beforeListTable` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  // ...
+  admin: {
+    components: {
+      // highlight-start
+      beforeListTable: ['/path/to/MyBeforeListTableComponent'],
+      // highlight-end
+    },
+  },
+}
+```
+
+다음은 사용자 정의 `beforeListTable` 구성 요소의 예입니다:
+
+#### Server Component
+
+```tsx
+import React from 'react'
+import type { BeforeListTableServerProps } from 'payload'
+
+export function MyBeforeListTableComponent(props: BeforeListTableServerProps) {
+  return <div>This is a custom beforeListTable component (Server)</div>
+}
+```
+
+#### Client Component
+
+```tsx
+'use client'
+import React from 'react'
+import type { BeforeListTableClientProps } from 'payload'
+
+export function MyBeforeListTableComponent(props: BeforeListTableClientProps) {
+  return <div>This is a custom beforeListTable component (Client)</div>
+}
+```### afterList
+
+`afterList` 속성을 사용하면 List View에서 문서 목록 뒤에 사용자 정의 구성 요소를 주입할 수 있습니다.
+
+`afterList` 구성 요소를 추가하려면 [Collection Config](../configuration/collections)에서 `components.afterList` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  // ...
+  admin: {
+    components: {
+      // highlight-start
+      afterList: ['/path/to/MyAfterListComponent'],
+      // highlight-end
+    },
+  },
+}
+```
+
+다음은 사용자 정의 `afterList` 구성 요소의 예입니다:
+
+#### Server Component
+
+```tsx
+import React from 'react'
+import type { AfterListServerProps } from 'payload'
+
+export function MyAfterListComponent(props: AfterListServerProps) {
+  return <div>This is a custom afterList component (Server)</div>
+}
+```
+
+#### Client Component
+
+```tsx
+'use client'
+import React from 'react'
+import type { AfterListClientProps } from 'payload'
+
+export function MyAfterListComponent(props: AfterListClientProps) {
+  return <div>This is a custom afterList component (Client)</div>
+}
+```### afterListTable
+
+`afterListTable` 속성을 사용하면 List View에서 문서 테이블 뒤에 사용자 정의 구성 요소를 주입할 수 있습니다.
+
+`afterListTable` 구성 요소를 추가하려면 [Collection Config](../configuration/collections)에서 `components.afterListTable` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  // ...
+  admin: {
+    components: {
+      // highlight-start
+      afterListTable: ['/path/to/MyAfterListTableComponent'],
+      // highlight-end
+    },
+  },
+}
+```
+
+다음은 사용자 정의 `afterListTable` 구성 요소의 예입니다:
+
+#### Server Component
+
+```tsx
+import React from 'react'
+import type { AfterListTableServerProps } from 'payload'
+
+export function MyAfterListTableComponent(props: AfterListTableServerProps) {
+  return <div>This is a custom afterListTable component (Server)</div>
+}
+```
+
+#### Client Component
+
+```tsx
+'use client'
+import React from 'react'
+import type { AfterListTableClientProps } from 'payload'
+
+export function MyAfterListTableComponent(props: AfterListTableClientProps) {
+  return <div>This is a custom afterListTable component (Client)</div>
+}
+```### Description
+
+`Description` 속성을 사용하면 List View에서 Collection의 사용자 정의 설명을 렌더링할 수 있습니다.
+
+`Description` 구성 요소를 추가하려면 [Collection Config](../configuration/collections)에서 `components.Description` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  // ...
+  admin: {
+    components: {
+      // highlight-start
+      Description: '/path/to/MyDescriptionComponent',
+      // highlight-end
+    },
+  },
+}
+```
+
+<Banner type="warning">
+  **참고:** `Description` 구성 요소는 List View와 [Edit View](./edit-view) 간에 공유됩니다.
+</Banner>
+
+다음은 사용자 정의 `Description` 구성 요소의 예입니다:
+
+#### Server Component
+
+```tsx
+import React from 'react'
+import type { ViewDescriptionServerProps } from 'payload'
+
+export function MyDescriptionComponent(props: ViewDescriptionServerProps) {
+  return <div>This is a custom Collection description component (Server)</div>
+}
+```
+
+#### Client Component
+
+```tsx
+'use client'
+import React from 'react'
+import type { ViewDescriptionClientProps } from 'payload'
+
+export function MyDescriptionComponent(props: ViewDescriptionClientProps) {
+  return <div>This is a custom Collection description component (Client)</div>
+}
+```

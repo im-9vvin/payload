@@ -1,0 +1,139 @@
+---
+title: 트랜잭션
+label: 트랜잭션
+order: 30
+keywords: 데이터베이스, 트랜잭션, sql, mongodb, postgres, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, typescript, node, react, nextjs
+desc: 데이터베이스 트랜잭션은 Payload 내에서 완전히 지원됩니다.
+---
+
+데이터베이스 트랜잭션을 통해 애플리케이션은 전부 아니면 전무(all-or-nothing) 커밋으로 일련의 데이터베이스 변경을 수행할 수 있습니다. 새로운 **주문**을 생성하고 관련 **아이템**의 재고 수를 업데이트하는 `afterChange` 훅이 있는 HTTP 요청을 생각해보세요. **아이템**을 업데이트할 때 오류가 발생하고 HTTP 오류가 사용자에게 반환되면, 새로운 **주문**이 유지되거나 다른 아이템들이 변경되는 것을 원하지 않을 것입니다. 데이터베이스와의 이런 종류의 상호작용은 트랜잭션으로 원활하게 처리됩니다.
+
+기본적으로 Payload는 구성된 데이터베이스에서 지원하는 한 모든 데이터 변경 작업에 트랜잭션을 사용합니다. 데이터베이스 변경사항은 모든 Payload 작업 내에 포함되며 발생한 오류는 모든 변경사항이 커밋되지 않고 롤백됩니다. 데이터베이스에서 트랜잭션이 지원되지 않는 경우 Payload는 트랜잭션 없이도 예상대로 계속 작동합니다.
+
+<Banner type="info">
+  **참고:**
+
+MongoDB는 트랜잭션을 사용하기 위해 replicaset에 대한 연결이 필요합니다.
+
+</Banner>
+
+<Banner type="info">
+  **참고:**
+
+SQLite의 트랜잭션은 기본적으로 비활성화되어 있습니다. 활성화하려면 `transactionOptions: {}`를 전달해야 합니다.
+
+</Banner>
+
+Payload에 대한 초기 요청은 새 트랜잭션을 시작하고 이를 `req.transactionID`에 첨부합니다. 데이터베이스와 상호작용하는 `hook`이 있는 경우 인수에 `req`를 전달하여 동일한 트랜잭션을 사용하도록 선택할 수 있습니다. 예를 들어:
+
+```ts
+const afterChange: CollectionAfterChangeHook = async ({ req }) => {
+  // req.transactionID가 Payload에서 할당되고 전달되므로,
+  // my-slug는 전체 요청이 성공한 경우에만 유지됩니다
+  await req.payload.create({
+    req,
+    collection: 'my-slug',
+    data: {
+      some: 'data',
+    },
+  })
+}
+```
+
+## 트랜잭션이 있는 비동기 훅
+
+Payload 훅은 비동기일 수 있고 결과를 기다리지 않도록 작성될 수 있으므로, 롤백되는 요청에 대해 잘못된 성공 응답이 반환될 수 있습니다. 결과를 `await`하지 않는 훅이 있는 경우 `req.transactionID`를 전달하지 **않아야** 합니다.
+
+```ts
+const afterChange: CollectionAfterChangeHook = async ({ req }) => {
+  // 경고: 동일한 req로 만들어진 비동기 호출이지만 await되지 않으면,
+  // 실패하여 커밋되지 않은 응답 데이터와 함께 OK 응답이 반환될 수 있습니다
+  const dangerouslyIgnoreAsync = req.payload.create({
+    req,
+    collection: 'my-slug',
+    data: {
+      some: 'other data',
+    },
+  })
+
+  // 이 호출이 실패하면 다른 변경사항을 롤백하지 않습니다
+  // req(와 transactionID)가 전달되지 않기 때문입니다
+  const safelyIgnoredAsync = req.payload.create({
+    collection: 'my-slug',
+    data: {
+      some: 'other data',
+    },
+  })
+}
+```
+
+## 직접 트랜잭션 액세스
+
+자체 스크립트나 커스텀 엔드포인트를 작성할 때 트랜잭션을 직접 제어하고 싶을 수 있습니다. 이는 Payload의 Local API 외부에서 데이터베이스와 상호작용할 때 유용합니다.
+
+다음 함수들을 트랜잭션 관리에 사용할 수 있습니다:
+
+- `payload.db.beginTransaction` - 새 세션을 시작하고 다른 Payload Local API 호출에서 사용할 트랜잭션 ID를 반환합니다.
+- `payload.db.commitTransaction` - 트랜잭션의 식별자를 받아서 변경사항을 완료합니다.
+- `payload.db.rollbackTransaction` - 트랜잭션의 식별자를 받아서 변경사항을 삭제합니다.
+
+Payload는 `req` 객체를 사용하여 트랜잭션 ID를 데이터베이스 어댑터에 전달합니다. `req` 객체를 사용하지 않는 경우 새 객체를 만들어 트랜잭션 ID를 데이터베이스 어댑터 메서드와 Local API 호출에 직접 전달할 수 있습니다.
+예제:
+
+```ts
+import payload from 'payload'
+import config from './payload.config'
+
+const standalonePayloadScript = async () => {
+  // Payload 초기화
+  await payload.init({ config })
+
+  const transactionID = await payload.db.beginTransaction()
+
+  try {
+    // Local API를 사용하여 업데이트 수행
+    await payload.update({
+      collection: 'posts',
+      data: {
+        some: 'data',
+      },
+      where: {
+        slug: { equals: 'my-slug' },
+      },
+      req: { transactionID },
+    })
+
+    /*
+      전부 아니면 전무 기준으로 커밋되어야 하는 
+      추가 db 변경이나 다른 함수들을 실행할 수 있습니다
+     */
+
+    // 트랜잭션 커밋
+    await payload.db.commitTransaction(transactionID)
+  } catch (error) {
+    // 트랜잭션 롤백
+    await payload.db.rollbackTransaction(transactionID)
+  }
+}
+
+standalonePayloadScript()
+```
+
+## 트랜잭션 비활성화
+
+트랜잭션을 완전히 비활성화하려면 데이터베이스 어댑터 구성에서 `transactionOptions`로 `false`를 전달할 수 있습니다. 모든 공식 Payload 데이터베이스 어댑터가 이 옵션을 지원합니다.
+
+어댑터 레벨에서 데이터베이스 트랜잭션을 비활성화할 수 있는 것 외에도, 인수에 `disableTransaction: true`를 추가하여 Local API에 대한 직접 호출에서 Payload가 트랜잭션을 사용하지 않도록 할 수 있습니다. 예를 들어:
+
+```ts
+await payload.update({
+  collection: 'posts',
+  data: {
+    some: 'data',
+  },
+  where: {
+    slug: { equals: 'my-slug' },
+  },
+  disableTransaction: true,
+})
+```

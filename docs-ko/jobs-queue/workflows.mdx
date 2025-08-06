@@ -1,0 +1,150 @@
+---
+title: Workflows
+label: Workflows
+order: 30
+desc: Task는 Payload의 Jobs Queue 내에서 실행할 수 있는 별개의 함수 선언입니다.
+keywords: jobs queue, application framework, typescript, node, react, nextjs
+---
+
+<Banner type="default">
+  **"Workflow"**는 *여러 tasks를 함께 결합*하여 실패 지점에서 
+  우아하게 재시도할 수 있는 선택적 방법입니다.
+</Banner>
+
+연속적으로 여러 tasks가 있고, 실패할 경우 각 task가 재시도될 수 있도록 구성하려는 경우에 가장 유용합니다.
+
+워크플로우 내의 task가 실패하면, Workflow는 자동으로 실패한 task에서 "다시 시작"하고 **이미 실행된 이전 tasks를 다시 실행하지 않습니다**.
+
+#### 워크플로우 정의하기
+
+Workflow의 가장 중요한 부분은 `handler`로, 여기서 `runTask` 함수를 단순히 호출하여 언제 어떻게 tasks를 실행할지 선언할 수 있습니다. 워크플로우 내의 어떤 task가 실패하면, 전체 `handler` 함수가 다시 실행됩니다.
+
+그러나 중요한 것은, 성공적으로 완료된 tasks는 다시 실행되지 않고 캐시되고 저장된 출력을 단순히 다시 반환한다는 것입니다. Workflow는 실패한 지점에서 다시 시작하고 실패 지점 이후의 task들만 다시 실행됩니다.
+
+JS 기반 워크플로우를 정의하려면, Payload 구성의 `jobs.workflows` 배열에 워크플로우를 추가하기만 하면 됩니다. 워크플로우는 다음 필드들로 구성됩니다:
+
+| 옵션            | 설명                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `slug`          | 이 워크플로우에 대한 슬러그 기반 이름을 정의합니다. 이 슬러그는 tasks와 workflows 모두에서 고유해야 합니다.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `handler`       | 워크플로우 실행을 담당해야 하는 함수입니다. 워크플로우 함수 파일에 대한 문자열 기반 경로나 워크플로우 job 함수 자체를 전달할 수 있습니다. 워크플로우 내에서 큰 의존성을 사용하는 경우, Next.js 앱에서 큰 의존성을 번들링하는 것을 피하기 위해 문자열 경로를 전달하는 것을 선호할 수 있습니다. 문자열 경로를 전달하는 것은 작동하기 위해 정교한 빌드 파이프라인이 필요할 수 있는 고급 기능입니다.                                                                                                                                                                                                        |
+| `inputSchema`   | 입력 필드 스키마를 정의합니다 - Payload가 이 스키마에 대한 타입을 생성합니다.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `interfaceName` | interfaceName을 사용하여 이 워크플로우에 대해 생성되는 인터페이스의 이름을 변경할 수 있습니다. 기본적으로 이것은 "Workflow" + 대문자화된 워크플로우 슬러그입니다.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `label`         | 이 워크플로우에 대한 사용자 친화적인 라벨을 정의합니다.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `queue`         | 선택적으로, 이 워크플로우가 연결되어야 하는 큐 이름을 정의합니다. 기본값은 "default"입니다.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `retries`       | 워크플로우 레벨에서 `retries`를 정의할 수 있으며, 이는 워크플로우가 해당 재시도 횟수까지만 실패할 수 있도록 강제합니다. task에 재시도가 지정되지 않은 경우, 워크플로우에서 지정한 재시도 횟수를 상속받습니다. `워크플로우` 재시도로 `0`을 지정할 수 있으며, 이는 모든 `task` 재시도 사양을 무시하고 어떤 task 실패에서든 전체 워크플로우를 실패시킵니다. `워크플로우` 재시도를 정의되지 않은 상태로 둘 수 있으며, 이 경우 워크플로우는 각 task가 자체 재시도 횟수로 지시하는 것을 존중합니다. 기본적으로 이는 정의되지 않으며, 이는 워크플로우 재시도가 그들의 tasks에 의해 정의됨을 의미합니다 |예시:
+
+```ts
+export default buildConfig({
+  // ...
+  jobs: {
+    tasks: [
+      // ...
+    ]
+    workflows: [
+      {
+        slug: 'createPostAndUpdate',
+
+        // 워크플로우가 허용할 인수들
+        inputSchema: [
+          {
+            name: 'title',
+            type: 'text',
+            required: true,
+          },
+        ],
+
+        // 워크플로우의 "제어 흐름"을 정의하는 핸들러
+        // `tasks` 인수를 사용하여 미리 정의된 tasks를 실행하는 방법에 주목하세요.
+        // 이들은 강타입입니다!
+        handler: async ({ job, tasks }) => {
+
+          // 이 워크플로우는 먼저 `createPost`라는 task를 실행합니다.
+
+          // 이 task 호출에 대해 고유한 ID를 정의해야 합니다
+          // 이는 이 워크플로우가 실패하고 미래에 다시 실행될 경우
+          // 항상 같아야 합니다. 여기서는 '1'로 하드코딩했습니다
+          const output = await tasks.createPost('1', {
+            input: {
+              title: job.input.title,
+            },
+          })
+
+          // 이전 task가 완료되면, `updatePost`라는 
+          // task를 실행합니다
+          await tasks.updatePost('2', {
+            input: {
+              post: job.taskStatus.createPost['1'].output.postID, // 또는 output.postID
+              title: job.input.title + '2',
+            },
+          })
+        },
+      } as WorkflowConfig<'updatePost'>
+    ]
+  }
+})
+```
+
+#### 인라인으로 tasks 실행하기
+
+위의 예시에서 우리의 워크플로우는 Payload 구성에서 이미 정의된 tasks를 실행했습니다. 하지만 미리 정의하지 않고도 tasks를 실행할 수 있습니다.
+
+이를 위해 `inlineTask` 함수를 사용할 수 있습니다.
+
+이 접근 방식의 단점은 tasks를 워크플로우 간에 쉽게 재사용할 수 없고, **job에 저장된 task 데이터**가 타입이 지정되지 않는다는 것입니다. 다음 예시에서 인라인 task 데이터는 job의 `job.taskStatus.inline['2']` 아래에 저장되지만 완전히 타입이 지정되지 않습니다. 이와 같은 동적 tasks에 대한 타입은 미리 생성할 수 없기 때문입니다.
+
+예시:
+
+```ts
+export default buildConfig({
+  // ...
+  jobs: {
+    tasks: [
+      // ...
+    ]
+    workflows: [
+      {
+        slug: 'createPostAndUpdate',
+        inputSchema: [
+          {
+            name: 'title',
+            type: 'text',
+            required: true,
+          },
+        ],
+        handler: async ({ job, tasks, inlineTask }) => {
+          // 여기서는 미리 정의된 task를 실행합니다.
+          // `createPost` 핸들러 인수와 반환 타입이
+          // 모두 강타입입니다
+          const output = await tasks.createPost('1', {
+            input: {
+              title: job.input.title,
+            },
+          })
+
+          // 여기서 이 task는 Payload 구성에서 정의되지 않고
+          // "인라인"입니다. 그 출력은 데이터베이스의 Job에 저장되지만
+          // 인수는 타입이 지정되지 않습니다.
+          const { newPost } = await inlineTask('2', {
+            task: async ({ req }) => {
+              const newPost = await req.payload.update({
+                collection: 'post',
+                id: '2',
+                req,
+                retries: 3,
+                data: {
+                  title: 'updated!',
+                },
+              })
+              return {
+                output: {
+                  newPost
+                },
+              }
+            },
+          })
+        },
+      } as WorkflowConfig<'updatePost'>
+    ]
+  }
+})
+```

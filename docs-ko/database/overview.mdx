@@ -1,0 +1,73 @@
+---
+title: 데이터베이스
+label: 개요
+order: 10
+keywords: 데이터베이스, mongodb, postgres, 문서, 콘텐츠 관리 시스템, cms, 헤드리스, typescript, node, react, nextjs
+desc: Payload를 사용하면 자체 데이터베이스를 가져와서 데이터를 소유할 수 있습니다. 완전한 제어권을 가집니다.
+---
+
+Payload는 데이터베이스에 구애받지 않습니다. 즉, Payload의 친숙한 API 뒤에서 어떤 유형의 데이터베이스든 사용할 수 있습니다. Payload는 Payload의 내부 데이터 구조를 데이터베이스의 기본 데이터 구조로 변환하는 얇은 레이어인 데이터베이스 어댑터를 통해 데이터베이스와 상호 작용하도록 설계되었습니다.
+
+현재 Payload는 공식적으로 다음 데이터베이스 어댑터를 지원합니다:
+
+- [Mongoose](https://mongoosejs.com/)를 사용한 [MongoDB](/docs/database/mongodb)
+- [Drizzle](https://drizzle.team/)을 사용한 [Postgres](/docs/database/postgres)
+- [Drizzle](https://drizzle.team/)을 사용한 [SQLite](/docs/database/sqlite)
+
+데이터베이스 어댑터를 구성하려면 [Payload Config](../configuration/overview)에서 `db` 속성을 사용하세요:
+
+```ts
+import { buildConfig } from 'payload'
+import { mongooseAdapter } from '@payloadcms/db-mongodb'
+
+export default buildConfig({
+  // ...
+  // highlight-start
+  db: mongooseAdapter({
+    url: process.env.DATABASE_URI,
+  }),
+  // highlight-end
+})
+```
+
+<Banner type="warning">
+  **알림:** 데이터베이스 어댑터는 외부 의존성이며 Payload와 별도로 프로젝트에
+  설치되어야 합니다. 각 데이터베이스 어댑터의 설치 지침은 해당 문서에서
+  찾을 수 있습니다.
+</Banner>
+
+## 데이터베이스 선택
+
+프로젝트와 워크로드에 적합한 데이터베이스 기술과 호스팅 옵션을 선택할 때 고려해야 할 몇 가지 요소가 있습니다. Payload는 이론적으로 모든 데이터베이스를 지원할 수 있지만, 어떤 데이터베이스를 사용할지는 사용자가 결정해야 합니다.
+
+선택할 수 있는 데이터베이스의 두 가지 주요 범주가 있습니다:
+
+- [비관계형 데이터베이스](#non-relational-databases)
+- [관계형 데이터베이스](#relational-databases)
+
+### 비관계형 데이터베이스
+
+프로젝트에 동적 필드가 많고 Payload가 문서 전반에 걸쳐 데이터 무결성을 강제하는 것을 편안하게 받아들인다면 MongoDB는 훌륭한 선택입니다. MongoDB를 사용하면 로컬라이제이션이 활성화되어 있든, 블록이나 배열 필드가 얼마나 많든 상관없이 Payload 문서가 데이터베이스에 _하나의_ 문서로 저장됩니다. 즉, 데이터베이스의 데이터 형태가 필드 스키마를 매우 가깝게 반영하고 데이터 저장이나 검색에 관련된 복잡성이 최소화됩니다.
+
+다음의 경우 MongoDB를 선호해야 합니다:
+
+- 데이터베이스 내에서 단순함을 선호하는 경우
+- [DDL 변경](https://en.wikipedia.org/wiki/Data_definition_language)을 통해 프로덕션/스테이징 데이터베이스를 동기화하는 것을 다루고 싶지 않은 경우
+- 프로젝트의 대부분(또는 모든 것)이 [로컬라이제이션](../configuration/localization)된 경우
+- 많은 [배열](../fields/array), [블록](../fields/blocks), 또는 `hasMany` [선택](../fields/select) 필드를 활용하는 경우
+
+### 관계형 데이터베이스
+
+많은 프로젝트가 데이터베이스 레벨에서 데이터 형태가 강력하게 강제되는 더 엄격한 데이터베이스 아키텍처를 요구할 수 있습니다. 예를 들어, 데이터의 형태를 알고 있고 상대적으로 "평평하며" 자주 변경될 것으로 예상하지 않는다면, 워크로드가 Postgres와 같은 관계형 데이터베이스에 매우 잘 맞을 수 있습니다.
+
+다음의 경우 Postgres나 SQLite 같은 관계형 DB를 선호해야 합니다:
+
+- [마이그레이션](./migrations)에 편안함을 느끼는 경우
+- 데이터베이스 레벨에서 강제되는 데이터 일관성이 필요한 경우
+- 컬렉션 간에 많은 관계가 있고 관계가 강제되어야 하는 경우
+
+## Payload 차이점
+
+공식적으로 지원되는 모든 데이터베이스 어댑터에서 [로컬라이제이션](../configuration/localization), [배열](../fields/array), [블록](../fields/blocks) 등을 포함하여 거의 모든 Payload 기능이 사용 가능하다는 점을 주목하는 것이 중요합니다. SQLite에서 아직 지원되지 않는 유일한 것은 [Point 필드](/docs/fields/point)인데, 이는 곧 추가될 예정입니다.
+
+프로젝트의 요구사항에 따라 사용할 데이터베이스를 선택하는 것은 사용자에게 달려 있습니다. Payload는 궁극적으로 선택해야 할 데이터베이스에 대한 의견이 없습니다.

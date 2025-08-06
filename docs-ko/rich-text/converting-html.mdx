@@ -1,0 +1,248 @@
+---
+title: HTML 변환
+label: HTML 변환
+order: 22
+desc: lexical richtext와 HTML 간의 변환
+keywords: lexical, richtext, html
+---
+
+## Rich Text를 HTML로 변환
+
+Lexical 기반 rich text를 HTML로 변환하는 주요 접근 방식은 두 가지입니다:
+
+1. **필요 시 HTML 생성 (권장)**: JSON을 필요한 곳에서 필요할 때 HTML로 변환합니다.
+2. **Collection 내에서 HTML 생성**: 저장된 JSON 콘텐츠를 자동으로 HTML로 변환하는 새 필드를 생성합니다. 이 방법은 Payload API에 오버헤드를 추가하고 라이브 프리뷰와 잘 작동하지 않을 수 있으므로 권장되지 않습니다.
+
+### 필요 시 변환
+
+필요 시 JSON을 HTML로 변환하려면 `@payloadcms/richtext-lexical/html`의 `convertLexicalToHTML` 함수를 사용하세요. 다음은 프론트엔드의 React 컴포넌트에서 사용하는 예시입니다:
+
+```tsx
+'use client'
+
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
+
+import React from 'react'
+
+export const MyComponent = ({ data }: { data: SerializedEditorState }) => {
+  const html = convertLexicalToHTML({ data })
+
+  return <div dangerouslySetInnerHTML={{ __html: html }} />
+}
+```
+
+#### 동적 채우기 (고급)
+
+기본적으로 `convertLexicalToHTML`은 완전히 채워진 데이터(예: 업로드, 링크 등)를 기대합니다. 이러한 노드를 동적으로 가져와서 채워야 한다면 `@payloadcms/richtext-lexical/html-async`의 비동기 변형인 `convertLexicalToHTMLAsync`를 사용하세요. `populate` 함수를 제공해야 합니다:
+
+```tsx
+'use client'
+
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+
+import { getRestPopulateFn } from '@payloadcms/richtext-lexical/client'
+import { convertLexicalToHTMLAsync } from '@payloadcms/richtext-lexical/html-async'
+import React, { useEffect, useState } from 'react'
+
+export const MyComponent = ({ data }: { data: SerializedEditorState }) => {
+  const [html, setHTML] = useState<null | string>(null)
+  useEffect(() => {
+    async function convert() {
+      const html = await convertLexicalToHTMLAsync({
+        data,
+        populate: getRestPopulateFn({
+          apiURL: `http://localhost:3000/api`,
+        }),
+      })
+      setHTML(html)
+    }
+
+    void convert()
+  }, [data])
+
+  return html && <div dangerouslySetInnerHTML={{ __html: html }} />
+}
+```
+
+REST populate 함수를 사용하면 각 노드에 대해 별도의 요청이 전송됩니다. 많은 수의 노드를 채워야 한다면 속도가 느릴 수 있습니다. 서버에서 향상된 성능을 위해 `getPayloadPopulateFn` 함수를 사용할 수 있습니다:
+
+```tsx
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+
+import { getPayloadPopulateFn } from '@payloadcms/richtext-lexical'
+import { convertLexicalToHTMLAsync } from '@payloadcms/richtext-lexical/html-async'
+import { getPayload } from 'payload'
+import React from 'react'
+
+import config from '../../config.js'
+
+export const MyRSCComponent = async ({
+  data,
+}: {
+  data: SerializedEditorState
+}) => {
+  const payload = await getPayload({
+    config,
+  })
+
+  const html = await convertLexicalToHTMLAsync({
+    data,
+    populate: await getPayloadPopulateFn({
+      currentDepth: 0,
+      depth: 1,
+      payload,
+    }),
+  })
+
+  return html && <div dangerouslySetInnerHTML={{ __html: html }} />
+}
+```
+
+### HTML 필드
+
+`lexicalHTMLField()` 헬퍼는 JSON을 HTML로 변환하고 `afterRead` 훅을 통해 읽을 때마다 업데이트되는 필드에 저장합니다. 일반적으로 두 가지 이유로 권장되지 않습니다:
+
+1. 다른 형식의 중복 콘텐츠로 컬럼을 생성합니다.
+2. [클라이언트 사이드 라이브 프리뷰](/docs/live-preview/client)에서 "라이브"가 아니게 됩니다.
+
+좋은 이유가 없다면 [위의 필요 시 HTML 변환기](/docs/rich-text/converting-html#on-demand-recommended) 또는 [JSX 변환기](/docs/rich-text/converting-jsx) 사용을 고려하세요.
+
+```ts
+import type { HTMLConvertersFunction } from '@payloadcms/richtext-lexical/html'
+import type { MyTextBlock } from '@/payload-types.js'
+import type { CollectionConfig } from 'payload'
+
+import {
+  BlocksFeature,
+  type DefaultNodeTypes,
+  lexicalEditor,
+  lexicalHTMLField,
+  type SerializedBlockNode,
+} from '@payloadcms/richtext-lexical'
+
+const Pages: CollectionConfig = {
+  slug: 'pages',
+  fields: [
+    {
+      name: 'nameOfYourRichTextField',
+      type: 'richText',
+      editor: lexicalEditor(),
+    },
+    lexicalHTMLField({
+      htmlFieldName: 'nameOfYourRichTextField_html',
+      lexicalFieldName: 'nameOfYourRichTextField',
+    }),
+    {
+      name: 'customRichText',
+      type: 'richText',
+      editor: lexicalEditor({
+        features: ({ defaultFeatures }) => [
+          ...defaultFeatures,
+          BlocksFeature({
+            blocks: [
+              {
+                interfaceName: 'MyTextBlock',
+                slug: 'myTextBlock',
+                fields: [
+                  {
+                    name: 'text',
+                    type: 'text',
+                  },
+                ],
+              },
+            ],
+          }),
+        ],
+      }),
+    },
+    lexicalHTMLField({
+      htmlFieldName: 'customRichText_html',
+      lexicalFieldName: 'customRichText',
+      // 추가 변환기를 전달하거나 기본 변환기를 재정의할 수 있습니다
+      converters: (({ defaultConverters }) => ({
+        ...defaultConverters,
+        blocks: {
+          myTextBlock: ({ node, providedCSSString }) =>
+            `<div style="background-color: red;${providedCSSString}">${node.fields.text}</div>`,
+        },
+      })) as HTMLConvertersFunction<
+        DefaultNodeTypes | SerializedBlockNode<MyTextBlock>
+      >,
+    }),
+  ],
+}
+```
+
+## 블록을 HTML로 변환
+
+rich text에 Lexical 블록이 포함되어 있다면 이를 HTML로 변환하는 방법을 제공해야 합니다. 예를 들어:
+
+```tsx
+'use client'
+
+import type { MyInlineBlock, MyTextBlock } from '@/payload-types'
+import type {
+  DefaultNodeTypes,
+  SerializedBlockNode,
+  SerializedInlineBlockNode,
+} from '@payloadcms/richtext-lexical'
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+
+import {
+  convertLexicalToHTML,
+  type HTMLConvertersFunction,
+} from '@payloadcms/richtext-lexical/html'
+import React from 'react'
+
+type NodeTypes =
+  | DefaultNodeTypes
+  | SerializedBlockNode<MyTextBlock>
+  | SerializedInlineBlockNode<MyInlineBlock>
+
+const htmlConverters: HTMLConvertersFunction<NodeTypes> = ({
+  defaultConverters,
+}) => ({
+  ...defaultConverters,
+  blocks: {
+    // 각 키는 블록의 slug와 일치해야 합니다
+    myTextBlock: ({ node, providedCSSString }) =>
+      `<div style="background-color: red;${providedCSSString}">${node.fields.text}</div>`,
+  },
+  inlineBlocks: {
+    // 각 키는 인라인 블록의 slug와 일치해야 합니다
+    myInlineBlock: ({ node, providedStyleTag }) =>
+      `<span${providedStyleTag}>${node.fields.text}</span$>`,
+  },
+})
+
+export const MyComponent = ({ data }: { data: SerializedEditorState }) => {
+  const html = convertLexicalToHTML({
+    converters: htmlConverters,
+    data,
+  })
+
+  return <div dangerouslySetInnerHTML={{ __html: html }} />
+}
+```
+
+## HTML을 Richtext로 변환
+
+원시 HTML을 Lexical 에디터 상태로 변환해야 한다면 `@payloadcms/richtext-lexical`의 `convertHTMLToLexical`과 [에디터 설정을 가져오는 editorConfigFactory](/docs/rich-text/converters#retrieving-the-editor-config)를 사용하세요:
+
+```ts
+import {
+  convertHTMLToLexical,
+  editorConfigFactory,
+} from '@payloadcms/richtext-lexical'
+// jsdom과 @types/jsdom이 설치되어 있는지 확인하세요
+import { JSDOM } from 'jsdom'
+
+const html = convertHTMLToLexical({
+  editorConfig: await editorConfigFactory.default({
+    config, // 당신의 Payload 설정
+  }),
+  html: '<p>text</p>',
+  JSDOM, // JSDOM import를 전달하세요; 패키지 크기를 작게 유지하기 위해 번들되지 않습니다
+})
+```

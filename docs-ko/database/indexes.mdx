@@ -1,0 +1,64 @@
+---
+title: 인덱스
+label: 인덱스
+order: 40
+keywords: 데이터베이스, 인덱스
+desc: 더 빠른 쿼리를 생성하기 위해 필드를 인덱싱하세요.
+---
+
+데이터베이스 인덱스는 데이터베이스가 데이터를 빠르게 찾고 검색할 수 있도록 하여 데이터베이스 성능을 최적화하는 방법입니다. 자주 쿼리하거나 정렬하는 필드가 있다면, 해당 필드에 인덱스를 추가하면 이러한 작업의 속도를 크게 향상시킬 수 있습니다.
+
+쿼리가 실행될 때 데이터베이스는 하나의 필드를 찾기 위해 전체 문서를 스캔하지 않고, 대신 인덱스를 사용하여 데이터를 빠르게 찾습니다.
+
+필드를 인덱싱하려면 필드 config에서 `index` 옵션을 `true`로 설정하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export MyCollection: CollectionConfig = {
+  // ...
+  fields: [
+    // ...
+    {
+      name: 'title',
+      type: 'text',
+      // highlight-start
+      index: true,
+      // highlight-end
+    },
+  ]
+}
+```
+
+<Banner type="info">
+  **참고:** `id`, `createdAt`, `updatedAt` 필드는 기본적으로 인덱싱됩니다.
+</Banner>
+
+<Banner type="success">
+  **팁:** MongoDB를 사용하는 경우 [MongoDB
+  Compass](https://www.mongodb.com/products/compass)를 사용하여 인덱스를
+  시각화하고 관리할 수 있습니다.
+</Banner>
+
+## 복합 인덱스
+
+단일 필드 인덱싱 외에도 여러 필드를 함께 인덱싱하는 복합 인덱스를 만들 수도 있습니다. 이는 여러 필드로 필터링하거나 정렬하는 쿼리를 최적화하는 데 유용할 수 있습니다.
+
+복합 인덱스를 생성하려면 [컬렉션 Config](../configuration/collections)에서 `indexes` 옵션을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  // ...
+  fields: [
+    // ...
+  ],
+  indexes: [
+    {
+      fields: ['title', 'createdAt'],
+      unique: true, // 선택사항, 필드 조합이 고유하기를 원하는 경우
+    },
+  ],
+}
+```

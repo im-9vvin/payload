@@ -1,0 +1,182 @@
+---
+title: Document Views
+label: Document Views
+order: 50
+desc:
+keywords:
+---
+
+Document Views는 단일 [Collection](../configuration/collections) 또는 [Global](../configuration/globals) Document를 나타내는 여러 개의 개별 뷰로 구성됩니다. 모든 Document Views는 각각 `/collections/:collectionSlug/:id` 또는 `/globals/:globalSlug` 라우트 하에 범위가 지정됩니다.
+
+[Edit View](./edit-view)와 API View와 같은 기본 Document Views가 여러 개 있지만, 필요에 따라 [완전히 새로운 뷰](./custom-views#adding-new-views)를 만들 수도 있습니다. 모든 Document Views는 레이아웃을 공유하며 원하는 경우 자체 탭 기반 탐색을 제공할 수 있습니다.
+
+Document Views를 사용자 정의하려면 [Collection Config](../configuration/collections) 또는 [Global Config](../configuration/globals)에서 `admin.components.views.edit[key]` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollectionOrGlobalConfig: CollectionConfig = {
+  // ...
+  admin: {
+    components: {
+      views: {
+        // highlight-start
+        edit: {
+          default: {
+            Component: '/path/to/MyCustomEditView',
+          },
+          // 기타 옵션은 다음과 같습니다:
+          // - root
+          // - api
+          // - versions
+          // - version
+          // - [key: string]
+          // 자세한 내용은 아래를 참조하세요
+        },
+        // highlight-end
+      },
+    },
+  },
+}
+```
+
+## Config Options
+
+다음 옵션을 사용할 수 있습니다:
+
+| Property      | Description                                                                                                                                                     |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `root`        | Root View는 다른 모든 중첩 뷰와 라우트를 재정의합니다. 이 키가 설정되면 문서 컨트롤이나 탭이 렌더링되지 않습니다. [자세한 내용](#document-root).      |
+| `default`     | Default View는 문서가 편집되는 기본 뷰입니다. "Edit" 탭 내에 렌더링됩니다. [자세한 내용](./edit-view).                       |
+| `versions`    | Versions View는 단일 문서의 버전 기록을 탐색하는 데 사용됩니다. "Versions" 탭 내에 렌더링됩니다. [자세한 내용](../versions/overview). |
+| `version`     | Version View는 문서의 단일 버전을 편집하는 데 사용됩니다. "Version" 탭 내에 렌더링됩니다. [자세한 내용](../versions/overview).                 |
+| `api`         | API View는 주어진 문서에 대한 REST API JSON 응답을 표시하는 데 사용됩니다. "API" 탭 내에 렌더링됩니다.                                           |
+| `livePreview` | LivePreview view는 Live Preview 인터페이스를 표시하는 데 사용됩니다. "Live Preview" 탭 내에 렌더링됩니다. [자세한 내용](../live-preview/overview).     |
+| `[key]`       | 다른 모든 키는 완전히 새로운 Document View를 추가하는 데 사용할 수 있습니다.                                                                                                |
+
+_사용 가능한 모든 props를 포함한 Custom Views 구축에 대한 자세한 내용은 [Building Custom Views](./custom-views#building-custom-views)를 참조하세요._
+
+### Document Root
+
+Document Root는 Document의 최상위 라우트에 마운트됩니다. 이 속성을 설정하면 제목, [Document Tabs](#document-tabs), _그리고 [Edit View](./edit-view), API View 등을 포함한 모든 다른 중첩 Document Views_를 포함하여 전체 Document View 레이아웃을 완전히 인계받게 됩니다.
+
+Document Root를 설정할 때는 문서 컨트롤이나 탭이 렌더링되지 않으므로 필요한 모든 구성 요소와 컨트롤을 렌더링할 책임이 있습니다. Edit View만 정확히 바꾸려면 대신 `edit.default` 키를 사용하세요.
+
+Document Root를 재정의하려면 [Collection Config](../configuration/collections) 또는 [Global Config](../configuration/globals)에서 `views.edit.root` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  slug: 'my-collection',
+  admin: {
+    components: {
+      views: {
+        edit: {
+          // highlight-start
+          root: {
+            Component: '/path/to/MyCustomRootComponent', // highlight-line
+          },
+          // highlight-end
+        },
+      },
+    },
+  },
+}
+```
+
+### Edit View
+
+Edit View는 사용자가 개별 Collection 및 Global Documents와 상호 작용하는 곳입니다. 여기서 콘텐츠를 보고, 편집하고, 저장할 수 있습니다. Edit View는 `views.edit` 객체의 `default` 속성 하에 키가 지정됩니다.
+
+Edit View 사용자 정의에 대한 자세한 내용은 [Edit View](./edit-view) 문서를 참조하세요.
+
+## Document Tabs
+
+각 Document View에는 원하는 경우 탐색을 위한 탭을 제공할 수 있습니다. 탭은 레이블 변경만큼 간단한 것부터 전체 구성 요소 교체에 이르기까지 고도로 구성 가능하며, 어떤 방식으로든 수정할 수 있습니다.
+
+Document View에서 탭을 추가하거나 사용자 정의하려면 [Collection Config](../configuration/collections) 또는 [Global Config](../configuration/globals)에서 `views.edit.[key].tab` 속성을 사용하세요:
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const MyCollection: CollectionConfig = {
+  slug: 'my-collection',
+  admin: {
+    components: {
+      views: {
+        edit: {
+          myCustomView: {
+            Component: '/path/to/MyCustomView',
+            path: '/my-custom-tab',
+            // highlight-start
+            tab: {
+              Component: '/path/to/MyCustomTabComponent',
+            },
+            // highlight-end
+          },
+          anotherCustomView: {
+            Component: '/path/to/AnotherCustomView',
+            path: '/another-custom-view',
+            // highlight-start
+            tab: {
+              label: 'Another Custom View',
+              href: '/another-custom-view',
+              order: '100',
+            },
+            // highlight-end
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+<Banner type="warning">
+  **참고:** 이는 _Collections_ _및_ Globals 모두에 적용됩니다.
+</Banner>
+
+탭에 대해 다음 옵션을 사용할 수 있습니다:
+
+| Property    | Description                                                                                                   |
+| ----------- | ------------------------------------------------------------------------------------------------------------- |
+| `label`     | 탭에 표시할 레이블입니다.                                                                              |
+| `href`      | 탭을 클릭할 때 탐색할 URL입니다. 이는 선택 사항이며 기본적으로 탭의 `path`로 설정됩니다.            |
+| `order`     | 탐색에서 탭이 나타나는 순서입니다. 기본 탭과 사용자 정의 탭에 설정할 수 있습니다.                  |
+| `Component` | 탭에 렌더링할 구성 요소입니다. 이는 Server 또는 Client 구성 요소가 될 수 있습니다. [자세한 내용](#tab-components) |
+
+### Tab Components
+
+레이블이나 href를 변경하는 것만으로 충분하지 않은 경우 전체 탭 구성 요소를 자신만의 사용자 정의 구성 요소로 바꿀 수도 있습니다. 이는 `tab.Component` 속성을 사용자 정의 구성 요소의 경로로 설정하여 수행할 수 있습니다.
+
+다음은 사용자 정의 Document Tab를 스캐폴딩하는 방법의 예입니다:
+
+#### Server Component
+
+```tsx
+import React from 'react'
+import type { DocumentTabServerProps } from 'payload'
+import { Link } from '@payloadcms/ui'
+
+export function MyCustomTabComponent(props: DocumentTabServerProps) {
+  return (
+    <Link href="/my-custom-tab">This is a custom Document Tab (Server)</Link>
+  )
+}
+```
+
+#### Client Component
+
+```tsx
+'use client'
+import React from 'react'
+import type { DocumentTabClientProps } from 'payload'
+import { Link } from '@payloadcms/ui'
+
+export function MyCustomTabComponent(props: DocumentTabClientProps) {
+  return (
+    <Link href="/my-custom-tab">This is a custom Document Tab (Client)</Link>
+  )
+}
+```
